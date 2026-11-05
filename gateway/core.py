@@ -42,6 +42,7 @@ def validate_url(value):
 @dataclass
 class Settings:
     mode: str = "demo"
+    data_origin: str = "unverified"
     openems_url: str = "http://127.0.0.1:8084"
     openems_user: str = "x"
     openems_password: str = ""
@@ -53,6 +54,8 @@ class Settings:
     def __post_init__(self):
         if self.mode not in ("demo", "openems"):
             raise ValueError("GATEWAY_MODE must be demo or openems")
+        if self.data_origin not in ("unverified", "simulated", "equipment"):
+            raise ValueError("OPENEMS_DATA_ORIGIN must be unverified, simulated or equipment")
         if not math.isfinite(self.interval) or self.interval < 1 or self.capacity < 1:
             raise ValueError("Poll interval must be >= 1 second and capacity >= 1")
         validate_url(self.openems_url)

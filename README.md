@@ -51,6 +51,7 @@ Local collection and delivery use separate workers. During a ThingsBoard outage,
 | `SAMPLE_CAPACITY` | `17280` |
 | `OPENEMS_URL` / `OPENEMS_USER` | `http://127.0.0.1:8084` / `x` |
 | `OPENEMS_PASSWORD` | Empty |
+| `OPENEMS_DATA_ORIGIN` | `unverified`; use `simulated` for OpenEMS demo equipment, `equipment` only after qualification |
 | `THINGSBOARD_URL` / `THINGSBOARD_TOKEN` | Empty; forwarding disabled |
 
 ## Verify

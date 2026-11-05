@@ -14,6 +14,7 @@ from .core import OpenEMS, Settings, Store, forward
 
 def main():
     settings = Settings(mode=os.getenv("GATEWAY_MODE", "demo"),
+        data_origin=os.getenv("OPENEMS_DATA_ORIGIN", "unverified"),
         openems_url=os.getenv("OPENEMS_URL", "http://127.0.0.1:8084"),
         openems_user=os.getenv("OPENEMS_USER", "x"), openems_password=os.getenv("OPENEMS_PASSWORD", ""),
         thingsboard_url=os.getenv("THINGSBOARD_URL", ""), thingsboard_token=os.getenv("THINGSBOARD_TOKEN", ""),
@@ -88,7 +89,7 @@ def main():
                 stale = not latest or time.time()*1000 - latest["ts"] > max(15, settings.interval*3)*1000
                 with lock:
                     result = dict(state)
-                result.update(mode=settings.mode, stale=stale, latest=latest,
+                result.update(mode=settings.mode, data_origin="simulated" if settings.mode == "demo" else settings.data_origin, stale=stale, latest=latest,
                               history=list(reversed(samples)), buffer=store.status(), control_enabled=False)
                 self.send_body(200, json.dumps(result, allow_nan=False).encode())
             elif path in ("/", "/app.js", "/style.css"):

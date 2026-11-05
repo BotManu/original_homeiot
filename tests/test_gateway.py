@@ -53,6 +53,7 @@ class GatewayTests(unittest.TestCase):
 
     def test_invalid_settings(self):
         for kwargs in ({'mode': 'typo'}, {'interval': 0}, {'interval': float('nan')},
+                       {'data_origin': 'typo'},
                        {'capacity': 0}, {'thingsboard_url': 'https://example.test'},
                        {'openems_url': 'http://admin:secret@example.test'}):
             with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):

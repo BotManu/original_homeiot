@@ -26,11 +26,14 @@ async function refresh() {
     if (!response.ok) throw new Error('Gateway unavailable');
     const data = await response.json();
     const demo = data.mode === 'demo';
-    el('mode').textContent = demo ? 'Simulator' : 'Local gateway';
+    const simulatedEdge = !demo && data.data_origin === 'simulated';
+    el('mode').textContent = demo ? 'Simulator' : simulatedEdge ? 'OpenEMS · demo system' : 'OpenEMS · connected';
     el('notice').classList.toggle('error', data.stale || data.source === 'unavailable');
     el('notice').textContent = data.stale || data.source === 'unavailable'
       ? 'Energy connection unavailable. Displayed values are the last recorded measurements; physical state is unconfirmed.'
       : demo ? 'Simulator mode · These are example measurements. No equipment is connected and no commands are sent.'
+      : simulatedEdge ? 'Connected to the local OpenEMS demo system · Measurements come from OpenEMS, but do not represent verified physical equipment. Energy writes are disabled.'
+      : data.data_origin !== 'equipment' ? 'Reading OpenEMS locally · Equipment origin and sensor freshness have not been verified. Energy writes are disabled.'
       : 'Reading OpenEMS locally. Energy writes are disabled until equipment qualification is complete.';
     const v = data.latest?.values;
     el('solar').textContent = power(v?.solar_w); el('load').textContent = power(v?.load_w);
@@ -40,7 +43,7 @@ async function refresh() {
     el('updated').textContent = data.latest ? `${data.stale ? 'Last recorded' : 'Recorded'} ${new Date(data.latest.ts).toLocaleTimeString()}` : 'No measurements yet';
     el('source-name').textContent = demo ? 'Energy simulator' : 'OpenEMS Edge';
     el('source').textContent = data.source;
-    el('source-detail').textContent = demo ? 'Example energy flows for interface development.' : 'Read-only connection to local energy channels.';
+    el('source-detail').textContent = demo ? 'Example energy flows for interface development.' : simulatedEdge ? 'Read-only connection to the existing OpenEMS demo installation.' : 'Read-only connection to local energy channels.';
     el('delivery').textContent = data.delivery;
     el('queue').textContent = `${data.buffer.pending} samples awaiting delivery · ${data.buffer.dropped} unsent samples dropped at capacity.`;
     el('retention').textContent = `Up to ${data.buffer.capacity.toLocaleString()} samples retained. Oldest samples are removed at capacity.`;
