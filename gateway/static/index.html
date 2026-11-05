@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>OriginalHome · Local gateway</title><link rel="stylesheet" href="/style.css"><script defer src="/app.js"></script></head>
+<body>
+<aside><a class="brand" href="/">◈ <span>OriginalHome<small>LOCAL GATEWAY</small></span></a><nav><a href="#overview">Overview</a><a href="#energy">Energy</a><a href="#connections">Connections</a></nav><div class="local">● On your network<small>Local operation comes first</small></div></aside>
+<main id="overview"><header><div><div class="eyebrow">YOUR HOME, CONNECTED</div><h1>Gateway overview</h1><p>Your energy and connections, in one place.</p></div><span id="mode" class="badge">Connecting</span></header>
+<div id="notice" role="status" class="notice">Loading gateway status…</div>
+<section id="energy"><div class="section-title"><h2>Energy at a glance</h2><span id="updated">Waiting for measurements</span></div><div class="metrics">
+<article><span>Solar production</span><strong id="solar">—</strong><small>Available generation</small></article>
+<article><span>Home consumption</span><strong id="load">—</strong><small>Current power demand</small></article>
+<article><span>Grid exchange</span><strong id="grid">—</strong><small id="grid-direction">Import + / export −</small></article>
+<article><span>Battery charge</span><strong id="soc">—</strong><small id="battery">Waiting for battery</small></article>
+</div><div class="panels"><article class="chart-panel"><div class="section-title"><h2>Power through time</h2><span>Latest 120 samples</span></div><div class="legend"><span class="solar-dot">Solar</span><span class="load-dot">Home</span></div><svg id="chart" viewBox="0 0 720 200" role="img" aria-label="Solar production and home consumption over time"></svg><div class="chart-labels"><span id="start">—</span><span id="scale">W</span><span>Now</span></div></article><article class="control"><div class="eyebrow">LOCAL ENERGY CONTROL</div><h2>Managed by OpenEMS</h2><p>OpenEMS owns the equipment control loop. Cloud connectivity is separate from local control.</p><button disabled>Energy controls unavailable</button><small>Controls become available after your equipment and supported strategies are verified.</small></article></div></section>
+<section id="connections"><div class="section-title"><h2>Connections</h2><span>Gateway services</span></div><div class="connections"><article><h3 id="source-name">Energy source</h3><span id="source" class="badge">Waiting</span><p id="source-detail">Reading local energy measurements.</p></article><article><h3>ThingsBoard</h3><span id="delivery" class="badge">Waiting</span><p id="queue">Telemetry forwarding is optional.</p></article><article><h3>Local history</h3><span class="badge">On gateway</span><p id="retention">Durable, bounded storage.</p></article></div></section>
+<footer>OriginalHomeIOT <span>Local gateway · Development preview</span></footer></main></body></html>

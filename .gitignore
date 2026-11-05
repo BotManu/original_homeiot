@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+data/
+.venv/
+project-transfer.tar.gz
+project-history.bundle

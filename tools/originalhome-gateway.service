@@ -1,0 +1,18 @@
+[Unit]
+Description=OriginalHomeIOT local gateway development service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/OriginalHomeIOT
+ExecStart=/usr/bin/python3 -m gateway
+Environment=GATEWAY_MODE=demo
+Environment=GATEWAY_HOST=127.0.0.1
+Environment=GATEWAY_PORT=8080
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target
