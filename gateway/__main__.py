@@ -10,6 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
 from .core import OpenEMS, Settings, Store, forward
+from .growatt import connection_status
 
 
 def main():
@@ -83,7 +84,12 @@ def main():
             if not self.authorized():
                 return
             path = urlsplit(self.path).path
-            if path == "/api/overview":
+            if path == "/api/devices/growatt":
+                try:
+                    self.send_body(200, json.dumps(connection_status()).encode())
+                except (OSError, ValueError, KeyError):
+                    self.send_body(503, b'{"error":"Growatt commissioning profile unavailable"}')
+            elif path == "/api/overview":
                 samples = store.samples()
                 latest = samples[0] if samples else None
                 stale = not latest or time.time()*1000 - latest["ts"] > max(15, settings.interval*3)*1000

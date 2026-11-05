@@ -2,15 +2,16 @@
 
 Confirmed by the owner on 5 November 2026:
 
-- Inverter: Growatt SPH6000TL BL-UP, serial NUCPB2101P.
-- Datalogger: ShineWiFi-X, not currently reachable from the development Pi. It will be available at the deployment location.
-- Device inventory: `config/devices/growatt-sph6000tl-bl-up.json`. This is a qualification record, not a loaded OpenEMS driver or an active connection.
+- Inverter: older Growatt SPH6000, serial NUCPB2101P. Owner corrected the earlier BL-UP designation. Exact nameplate suffix and firmware still need on-site verification.
+- Selected datalogger: ShineWiFi-S (RS232 to Wi-Fi), not currently reachable from the development Pi. It will be available at the deployment location. Verify the physical port before commissioning.
+- ShineWiFi-X (USB to Wi-Fi) remains a catalog alternative, not the selected adapter for this installation.
+- Device inventory: `config/devices/growatt-sph6000.json`. This is a qualification record, not a loaded OpenEMS driver or an active connection.
 
 ## Connection boundary
 
 The current OriginalHome UI still reads the existing OpenEMS **demo** installation. Do not change `OPENEMS_DATA_ORIGIN` to `equipment` until real equipment measurements are verified. No Growatt registers, network endpoints or firmware versions have been inferred from the inverter serial number.
 
-The stock ShineWiFi-X uploads data to a monitoring server. A local upload receiver/proxy is a candidate; a direct standard Modbus TCP server must not be assumed just because the adapter uses Wi-Fi. Grott documents a proxy mode that receives uploads, decodes telemetry and forwards the original traffic to Growatt. It includes SPH support, but that does not establish the exact BL-UP firmware's data layout or writable capabilities. A receiver would require an additional OpenEMS telemetry integration; the current REST reader does not perform that role. Monitoring via uploads is not proof that the offline energy-control requirement is met.
+Stock ShineWiFi dongles upload data to a monitoring server. A local upload receiver/proxy is a candidate; a direct standard Modbus TCP server must not be assumed just because the adapter uses Wi-Fi. Grott documents a proxy mode that receives uploads, decodes telemetry and forwards the original traffic to Growatt. It includes SPH support, but that does not establish this exact older inverter firmware's data layout or writable capabilities. A receiver would require an additional OpenEMS telemetry integration; the current REST reader does not perform that role. Monitoring via uploads is not proof that the offline energy-control requirement is met.
 
 No dongle configuration, Growatt cloud account, inverter setting, receiver listener, or existing OpenEMS component has been changed for this device.
 
@@ -26,8 +27,23 @@ No dongle configuration, Growatt cloud account, inverter setting, receiver liste
 
 ## References
 
-- [Growatt SPH 3000–6000TL BL-UP product and downloads](https://en.growatt.com/products/sph-3000-6000tl-bl-up)
+- Obtain the older SPH6000 manual matching the nameplate/firmware. Previously referenced BL-UP documentation is not qualification evidence for this installation.
 - [Grott upstream: proxy mode and SPH support](https://github.com/johanmeijer/grott)
 - [Growatt Datalogger upstream: ShineWiFi-X server configuration](https://github.com/FezVrasta/growatt-datalogger)
 
 These are investigation references, not claims that the installed OpenEMS image or this exact device firmware is supported.
+
+## Selecting the serial Wi-Fi adapter
+
+The application now has a validated adapter catalog for `ShineWiFi-X` and `ShineWiFi-S`, an authenticated read-only profile endpoint at `/api/devices/growatt`, and a commissioning summary in the local UI. To select the serial Wi-Fi option on the Pi:
+
+```sh
+cd ~/OriginalHomeIOT
+python3 -m gateway.growatt --adapter ShineWiFi-S
+```
+
+To choose the USB Wi-Fi alternative, pass `--adapter ShineWiFi-X`. Switching adapters preserves inverter identity but clears adapter IP/serial/firmware and previous communication qualification. It does not start a receiver or send inverter commands. The current selection is ShineWiFi-S following the owner's correction to the older inverter variant.
+
+For ShineWiFi-S, verify the inverter provides the compatible RS232 connector and pinout before attaching it; do not substitute an RS485 port. Join the deployment's 2.4 GHz Wi-Fi, record the datalogger identity separately from NUCPB2101P, and qualify the local receiver using actual uploads. Receiver and OpenEMS bridge implementation remain outstanding for both adapter choices. No physical connection can be tested while the dongle is off site.
+
+Manufacturer reference: [Growatt ShineWiFi-X and ShineWiFi-S instructions](https://cdn.growatt.com/user_manual_file/Growatt_Datalog_WIFI-X%26WIFI-S_Instrctions.pdf).

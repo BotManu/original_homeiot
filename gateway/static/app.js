@@ -55,3 +55,20 @@ async function refresh() {
   } finally { setTimeout(refresh, 5000); }
 }
 refresh();
+async function refreshGrowatt() {
+  try {
+    const response = await fetch('/api/devices/growatt', {signal: AbortSignal.timeout(8000)});
+    if (!response.ok) throw new Error('Profile unavailable');
+    const data = await response.json();
+    const profile = data.profile;
+    const selected = profile.connection.adapter_model;
+    el('growatt-state').textContent = profile.status.replaceAll('_', ' ');
+    el('growatt-model').textContent = `${profile.manufacturer} ${profile.model}`;
+    el('growatt-adapter').textContent = `Selected: ${selected} · ${data.adapter_options[selected].inverter_interface} to Wi-Fi. Adapter choices: ${Object.keys(data.adapter_options).join(', ')}.`;
+    el('growatt-notice').textContent = data.notice;
+  } catch {
+    el('growatt-state').textContent = 'Profile unavailable';
+    el('growatt-notice').textContent = 'Unable to load the Growatt commissioning profile. Equipment connection is unconfirmed.';
+  } finally { setTimeout(refreshGrowatt, 15000); }
+}
+refreshGrowatt();

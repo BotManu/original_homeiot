@@ -56,6 +56,8 @@ Local collection and delivery use separate workers. During a ThingsBoard outage,
 
 ## Verify
 
+Growatt commissioning supports separate ShineWiFi-X (USB/Wi-Fi) and ShineWiFi-S (RS232/Wi-Fi) adapter profiles. Inspect with `python -m gateway.growatt`; choose the serial adapter with `python -m gateway.growatt --adapter ShineWiFi-S`. The authenticated `/api/devices/growatt` endpoint and UI report the selected profile. Adapter selection is preparation only: an upload receiver and OpenEMS bridge are not implemented, and physical compatibility and telemetry require on-site qualification. See `main_planning/growatt_connection.md`.
+
 ```powershell
 python -m unittest discover -s tests -v
 ```

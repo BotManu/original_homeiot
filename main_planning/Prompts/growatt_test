@@ -1,0 +1,11 @@
+
+Added and deployed **ShineWiFi-S commissioning support** on the Pi: adapter selection, profile validation, and UI status. All seven tests pass.
+
+To select it on the Pi:
+
+```sh
+cd ~/OriginalHomeIOT
+python3 -m gateway.growatt --adapter ShineWiFi-S
+```
+
+**The actual connection remains pending.** ShineWiFi-S requires RS232 compatibility, and the telemetry receiver/OpenEMS bridge still needs implementation and on-site verification. [Growatt adapter documentation](https://cdn.growatt.com/user_manual_file/Growatt_Datalog_WIFI-X%26WIFI-S_Instrctions.pdf).

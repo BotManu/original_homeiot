@@ -1,10 +1,13 @@
 {
   "manufacturer": "Growatt",
-  "model": "SPH6000TL BL-UP",
+  "model": "SPH6000",
+  "generation": "older_non_bl_up",
+  "exact_model_label_verified": false,
   "serial_number": "NUCPB2101P",
   "status": "awaiting_onsite_connection",
   "connection": {
-    "adapter_model": "ShineWiFi-X",
+    "adapter_model": "ShineWiFi-S",
+    "physical_interface_verified": false,
     "available_on_development_lan": false,
     "adapter_serial_number": null,
     "adapter_firmware": null,
