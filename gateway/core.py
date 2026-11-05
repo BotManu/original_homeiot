@@ -2,6 +2,7 @@
 import base64
 import json
 import math
+import re
 import sqlite3
 import time
 import urllib.parse
@@ -46,6 +47,7 @@ class Settings:
     openems_url: str = "http://127.0.0.1:8084"
     openems_user: str = "x"
     openems_password: str = ""
+    openems_component: str = "_sum"
     thingsboard_url: str = ""
     thingsboard_token: str = ""
     interval: float = 5
@@ -56,6 +58,8 @@ class Settings:
             raise ValueError("GATEWAY_MODE must be demo or openems")
         if self.data_origin not in ("unverified", "simulated", "equipment"):
             raise ValueError("OPENEMS_DATA_ORIGIN must be unverified, simulated or equipment")
+        if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', self.openems_component):
+            raise ValueError('Invalid OpenEMS component ID')
         if not math.isfinite(self.interval) or self.interval < 1 or self.capacity < 1:
             raise ValueError("Poll interval must be >= 1 second and capacity >= 1")
         validate_url(self.openems_url)
@@ -79,12 +83,19 @@ class OpenEMS:
                     "grid_w": load - solar - battery, "battery_soc": 67}
         auth = base64.b64encode(f"{self.settings.openems_user}:{self.settings.openems_password}".encode()).decode()
         # One response minimizes cross-request sample skew. Explicit allowlist below.
-        rows = request_json(self.settings.openems_url + "/rest/channel/_sum/.*",
+        component = self.settings.openems_component
+        rows = request_json(self.settings.openems_url + "/rest/channel/" + component + "/.*",
                             {"Authorization": "Basic " + auth})
         if not isinstance(rows, list):
             raise ValueError("Expected OpenEMS channel array")
         mapped = {row.get("address"): row.get("value") for row in rows if isinstance(row, dict)}
-        values = {key: mapped.get("_sum/" + channel) for key, channel in CHANNELS.items()}
+        if component != '_sum':
+            observed = mapped.get(component + '/LastSuccessfulRead')
+            if (isinstance(observed, bool) or not isinstance(observed, (int, float))
+                    or not math.isfinite(observed)
+                    or not -2000 <= time.time()*1000 - observed <= 15000):
+                raise ValueError('Equipment sample is unavailable or stale')
+        values = {key: mapped.get(component + "/" + channel) for key, channel in CHANNELS.items()}
         for key, value in values.items():
             if isinstance(value, bool) or not isinstance(value, (float, int)) or not math.isfinite(value):
                 raise ValueError("Missing or invalid energy channel: " + key)

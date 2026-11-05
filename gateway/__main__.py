@@ -18,6 +18,7 @@ def main():
         data_origin=os.getenv("OPENEMS_DATA_ORIGIN", "unverified"),
         openems_url=os.getenv("OPENEMS_URL", "http://127.0.0.1:8084"),
         openems_user=os.getenv("OPENEMS_USER", "x"), openems_password=os.getenv("OPENEMS_PASSWORD", ""),
+        openems_component=os.getenv('OPENEMS_COMPONENT', '_sum'),
         thingsboard_url=os.getenv("THINGSBOARD_URL", ""), thingsboard_token=os.getenv("THINGSBOARD_TOKEN", ""),
         interval=float(os.getenv("POLL_SECONDS", "5")), capacity=int(os.getenv("SAMPLE_CAPACITY", "17280")))
     host = os.getenv("GATEWAY_HOST", "127.0.0.1")

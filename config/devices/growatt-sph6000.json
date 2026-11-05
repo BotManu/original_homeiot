@@ -4,27 +4,31 @@
   "generation": "older_non_bl_up",
   "exact_model_label_verified": false,
   "serial_number": "NUCPB2101P",
-  "status": "awaiting_onsite_connection",
+  "status": "read_only_commissioned",
   "connection": {
-    "adapter_model": "ShineWiFi-S",
-    "physical_interface_verified": false,
+    "adapter_model": "USB-RS232",
+    "physical_interface_verified": true,
     "available_on_development_lan": false,
-    "adapter_serial_number": null,
+    "adapter_serial_number": "BHBLd143M08",
     "adapter_firmware": null,
     "inverter_firmware": null,
     "local_ip": null,
-    "serial_port": null,
-    "baud_rate": null,
-    "parity": null,
-    "stop_bits": null,
-    "unit_id": null,
-    "integration_method": "pending_qualification"
+    "serial_port": "/dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller_BHBLd143M08-if00-port0",
+    "baud_rate": 9600,
+    "parity": "none",
+    "stop_bits": 1,
+    "unit_id": 1,
+    "integration_method": "openems_read_only_serial_bridge",
+    "display_model_code": "GT1100F25D",
+    "reported_serial_number": "9876543210"
   },
   "qualification": {
-    "telemetry_verified": false,
-    "openems_driver_verified": false,
+    "telemetry_verified": true,
+    "openems_driver_verified": true,
     "equipment_writes_enabled": false,
     "battery_model": null,
-    "grid_meter_model": null
+    "grid_meter_model": null,
+    "scope": "Owner confirmed nighttime SoC, voltage and grid power; daylight and charge/discharge sign checks remain outstanding",
+    "identity_note": "Nameplate NUCPB2101P; Modbus reports 9876543210. Display model code matches registers 28-29: GT1100F25D. Serial mismatch unresolved."
   }
 }

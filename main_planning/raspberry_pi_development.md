@@ -28,6 +28,6 @@ systemctl --user restart originalhome-gateway
 journalctl --user -u originalhome-gateway -n 50 --no-pager
 ```
 
-Install the user unit from `tools/originalhome-gateway.service` into `~/.config/systemd/user/`, then run `systemctl --user daemon-reload` and `systemctl --user enable --now originalhome-gateway`. User services start with the user manager; unattended boot requires a separately configured lingering/login policy. No boot-persistence claim is made here.
+Install the user unit from `tools/originalhome-gateway.service` into `~/.config/systemd/user/`, then run `systemctl --user daemon-reload` and `systemctl --user enable --now originalhome-gateway`. On 5 November 2026, enabled lingering for `original_volt_gateway` and verified `Linger=yes` and the enabled, active gateway service. Startup without an interactive login is configured; actual reboot recovery remains untested. Direct Tailscale access now uses the nginx route documented in `tailscale_remote_access.md`.
 
 The transfer includes working source, tests, tools, planning documents and Git history. Generated caches, runtime databases and local credential/configuration directories are excluded. Subsequent development should be executed and tested on the Pi; keep source changes synchronized with the workspace deliberately.

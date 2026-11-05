@@ -52,11 +52,12 @@ Local collection and delivery use separate workers. During a ThingsBoard outage,
 | `OPENEMS_URL` / `OPENEMS_USER` | `http://127.0.0.1:8084` / `x` |
 | `OPENEMS_PASSWORD` | Empty |
 | `OPENEMS_DATA_ORIGIN` | `unverified`; use `simulated` for OpenEMS demo equipment, `equipment` only after qualification |
+| `OPENEMS_COMPONENT` | `_sum`; deployed Growatt telemetry uses isolated `growatt0` channels with required `LastSuccessfulRead` freshness |
 | `THINGSBOARD_URL` / `THINGSBOARD_TOKEN` | Empty; forwarding disabled |
 
 ## Verify
 
-Growatt commissioning supports ShineWiFi-X (USB/Wi-Fi), ShineWiFi-S (RS232/Wi-Fi), and direct USB-RS232 adapter profiles. Inspect the profile and detected Pi serial paths with `python -m gateway.growatt`; select wired commissioning with `python -m gateway.growatt --adapter USB-RS232`. Optional serial settings are validated and saved without opening the port. The authenticated `/api/devices/growatt` endpoint and UI report the selected profile. Adapter selection is preparation only: upload receiver, wired serial driver and OpenEMS integration are not implemented, and physical compatibility and telemetry require on-site qualification. See `main_planning/growatt_connection.md`.
+Growatt commissioning supports ShineWiFi-X (USB/Wi-Fi), ShineWiFi-S (RS232/Wi-Fi), and direct USB-RS232 adapter profiles. Inspect the profile and detected Pi serial paths with `python -m gateway.growatt`; select wired commissioning with `python -m gateway.growatt --adapter USB-RS232`. Optional serial settings are validated and saved without opening the port. The authenticated `/api/devices/growatt` endpoint and UI report the selected profile. The Pi now runs a read-only serial collector and an isolated OpenEMS telemetry bridge for the connected older SPH6000, display code `GT1100F25D`. Its nighttime SoC, voltage and grid-power readings were checked against the display by the owner. Daylight generation and battery charge/discharge sign checks remain outstanding. Selecting an adapter alone does not start the collector. Wi-Fi upload receivers and equipment control remain unimplemented. See `main_planning/growatt_connection.md` for deployment details and the unresolved reported/nameplate serial mismatch.
 
 ```powershell
 python -m unittest discover -s tests -v

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.3.0" name="OriginalHome.Growatt.ReadOnly" immediate="true" activate="activate" deactivate="deactivate">
+  <implementation class="originalhome.growatt.GrowattReadOnly"/>
+  <service>
+    <provide interface="io.openems.edge.common.component.OpenemsComponent"/>
+    <provide interface="org.osgi.service.event.EventHandler"/>
+  </service>
+  <property name="id" value="growatt0"/>
+  <property name="enabled" type="Boolean" value="true"/>
+  <property name="sample.path" value="/home/original_volt_gateway/OriginalHomeIOT/data/growatt-live/sample.json"/>
+  <property name="event.topics" value="io/openems/edge/cycle/BEFORE_PROCESS_IMAGE"/>
+</scr:component>

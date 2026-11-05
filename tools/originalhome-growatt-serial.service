@@ -1,0 +1,15 @@
+[Unit]
+Description=OriginalHome read-only Growatt SPH serial telemetry
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/OriginalHomeIOT
+ExecStart=/usr/bin/python3 -m gateway.growatt_serial --port /dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller_BHBLd143M08-if00-port0 --model-code GT1100F25D --output data/growatt-live/sample.json
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

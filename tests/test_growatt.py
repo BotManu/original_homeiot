@@ -47,7 +47,7 @@ class GrowattTests(unittest.TestCase):
             self.assertEqual(result['connection']['baud_rate'], 9600)
             self.assertFalse(result['qualification']['equipment_writes_enabled'])
             status = connection_status(path)
-            self.assertFalse(status['serial_driver_implemented'])
+            self.assertTrue(status['serial_driver_implemented'])
             result = select_adapter(path, 'ShineWiFi-S')
             self.assertIsNone(result['connection']['serial_port'])
             self.assertIsNone(result['connection']['baud_rate'])

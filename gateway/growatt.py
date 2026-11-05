@@ -74,10 +74,17 @@ def configure_connection(path, adapter=None, **serial):
 
 def connection_status(path=PROFILE):
     profile = load_profile(path)
+    commissioned = profile['qualification']['telemetry_verified'] and profile['qualification']['openems_driver_verified']
+    notice = ("Read-only serial telemetry commissioned through OpenEMS. Equipment writes remain disabled. "
+              "The nameplate serial differs from the inverter's reported serial; see the commissioning record."
+              if commissioned else
+              "Awaiting on-site qualification. Selecting an adapter does not connect the inverter. "
+              "USB-RS232 telemetry requires the configured serial collector and OpenEMS bridge; "
+              "Wi-Fi upload receiver integration is not implemented.")
     return {"profile": profile, "adapter_options": ADAPTERS,
-            "serial_ports": serial_ports(), "serial_driver_implemented": False,
+            "serial_ports": serial_ports(), "serial_driver_implemented": True,
             "receiver_implemented": False,
-            "notice": "Awaiting on-site qualification. USB-RS232 and ShineWiFi-S require a compatible RS232 port; ShineWiFi-X requires USB. Receiver/serial driver integration is not implemented. Selecting an adapter does not connect the inverter."}
+            "notice": notice}
 
 
 def main():

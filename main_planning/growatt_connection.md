@@ -9,7 +9,7 @@ Confirmed by the owner on 5 November 2026:
 
 ## Connection boundary
 
-The current OriginalHome UI still reads the existing OpenEMS **demo** installation. Do not change `OPENEMS_DATA_ORIGIN` to `equipment` until real equipment measurements are verified. No Growatt registers, network endpoints or firmware versions have been inferred from the inverter serial number.
+As of 5 November 2026, the deployed OriginalHome UI reads the connected inverter through the isolated OpenEMS `growatt0` telemetry component. The owner confirmed nighttime SoC, battery voltage and grid power against the inverter display. The existing simulated OpenEMS components remain separate; their `_sum` channels are not used by OriginalHome. Daylight generation and battery charge/discharge sign checks remain outstanding. No register writes are enabled.
 
 Stock ShineWiFi dongles upload data to a monitoring server. A local upload receiver/proxy is a candidate; a direct standard Modbus TCP server must not be assumed just because the adapter uses Wi-Fi. Grott documents a proxy mode that receives uploads, decodes telemetry and forwards the original traffic to Growatt. It includes SPH support, but that does not establish this exact older inverter firmware's data layout or writable capabilities. A receiver would require an additional OpenEMS telemetry integration; the current REST reader does not perform that role. Monitoring via uploads is not proof that the offline energy-control requirement is met.
 
@@ -69,4 +69,28 @@ python3 -m gateway.growatt --adapter USB-RS232
 
 Additional CLI options are `--serial-port`, `--baud-rate`, `--parity` (`none`, `even`, `odd`), `--stop-bits` (`1` or `2`), and `--unit-id`. Supply values confirmed for the exact older SPH6000 firmware; none are guessed or automatically applied. The unit ID setting is reserved for a verified Modbus integration. Supported configuration values do not establish that a protocol/baud is supported by the inverter. Prefer a persistent by-id port when selecting the actual adapter. Ensure the OpenEMS service user has serial-device access when commissioning the real driver.
 
-Changing adapters clears previous transport settings and qualification. Changing serial settings invalidates the previous communication qualification. No port opens, register reads or inverter writes occur when saving this profile. `serial_driver_implemented` remains false: the installed OpenEMS image still requires a qualified older-SPH6000 serial driver/register map. The gateway UI continues to read the OpenEMS demo until that separate hardware integration is completed. Receiver work for Wi-Fi adapters is independent from this wired path.
+Changing adapters clears previous transport settings and qualification. Changing serial settings invalidates the previous communication qualification. No port opens, register reads or inverter writes occur when saving this profile. Serial telemetry is now implemented for the installation described below. Receiver work for Wi-Fi adapters remains independent and unimplemented.
+
+## Wired commissioning result — 5 November 2026
+
+The Pi detected USB VID/PID `067b:23a3`, a Prolific/ATEN serial bridge, with the `pl2303` kernel driver. Persistent path: `/dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller_BHBLd143M08-if00-port0` (`/dev/ttyUSB0`). The owner confirmed connection to the inverter's RS232 monitoring port. The existing service account belongs to `dialout`.
+
+The inverter responded with valid Modbus CRCs at **9600 baud, 8N1, address 1**. Holding registers 28–29 read `0x1100, 0xF25D`, matching the display code **GT1100F25D**. This is a display/model code, not confirmation of a nameplate suffix. Holding registers 23–27 reported serial **9876543210**; the owner reconfirmed nameplate **NUCPB2101P**. That mismatch is unresolved and preserved in the profile. Do not overwrite or reprogram the inverter serial.
+
+The owner confirmed roughly **50% SoC, 53.6 V battery voltage and 730 W grid import** against the display. Subsequent reads showed changing load/grid power around 660–730 W. Solar was near zero at night; daytime PV and battery power signs still need comparison under those operating conditions.
+
+The register reference is the Growatt-authored [Modbus RTU Protocol II document](https://github.com/henols/growatt-client/blob/dev/docs/growatt-inverter-modbus-rtu-protocol-ii-series-modbus-growatt-inverter-modbus.pdf), whose title page identifies V1.05 and revision history includes V1.06. The downloaded filename on the Pi contains `v120` for historical reasons; it is not evidence of that document version. Input register pairs: 1–2 PV input power; 1009–1010 battery discharge; 1011–1012 battery charge; 1021–1022 import; 1029–1030 export; 1037–1038 local load, all in 0.1 W. Input 1013 is 0.1 V; 1014 is SoC percent. Solar reflects PV input/DC power, so it should not be treated as an exact AC energy-balance term.
+
+### Installed data path
+
+1. The user service `originalhome-growatt-serial` runs `gateway.growatt_serial` with pyserial, polling only three allowlisted blocks using functions 03/04. It verifies framing, CRC, display model code and measurement bounds. Requests are at least one second apart. It never issues register writes. Its atomic, private snapshot is `data/growatt-live/sample.json`.
+2. `tools/openems-growatt/` builds a small OSGi component against the exact installed OpenEMS JAR using JDK 21, deriving bundle imports with `jdeps`. The component reads that snapshot on the OpenEMS cycle and exports five **read-only** channels plus `LastSuccessfulRead` under `growatt0`. It implements no managed ESS/control interface. Invalid or older-than-15-second snapshots clear its measurement channels and raise `CommunicationFailed` with OpenEMS fault state 3.
+3. OriginalHome uses `OPENEMS_COMPONENT=growatt0`, `OPENEMS_DATA_ORIGIN=equipment`, and `GATEWAY_DATA=data/growatt-gt1100f25d` in its private environment file. The REST adapter rejects missing/stale equipment timestamps. Existing demo history is preserved separately.
+
+The bundle is embedded as `jar/org.originalhome.growatt.readonly.jar` in `/home/original_volt_gateway/original/openems-edge.jar` and listed in `launcher.properties`. A full OpenEMS restart successfully loaded it. The original JAR is preserved as `openems-edge.pre-growatt.jar`; the original private environment is `~/.config/originalhome/gateway.env.pre-growatt`. Both user services are enabled, with user lingering already enabled. Reboot recovery remains untested.
+
+Build after source changes with `python3 tools/openems-growatt/build.py ~/original/openems-edge.jar`. This creates `data/openems-build/originalhome-growatt-readonly.jar`; it does not deploy it. Replacing the OpenEMS distribution in future requires reincluding this bundle and its launcher entry.
+
+Validated authenticated OriginalHome UI/assets/APIs over the Tailscale URL, advancing equipment-only history and disabled control. Stopping the collector cleared OpenEMS telemetry after 15 seconds; restarting it restored measurements. Raw initial replies and protocol text remain under the Pi's ignored `data/commissioning/` directory. No firmware, address, baud or inverter settings were written.
+
+To roll back: stop/disable `originalhome-growatt-serial`; restore `gateway.env.pre-growatt` to `gateway.env` and restart `originalhome-gateway`. To also remove the OpenEMS bundle, stop `original-edge`, restore `openems-edge.pre-growatt.jar` to `openems-edge.jar`, and start `original-edge` again. Preserve live history for investigation.
