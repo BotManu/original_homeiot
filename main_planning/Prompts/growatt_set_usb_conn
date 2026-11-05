@@ -1,0 +1,12 @@
+Added and deployed the **USB-to-RS232 commissioning option** on the Pi, including serial-port discovery and validated communication settings. All nine tests pass.
+
+To select it:
+
+```sh
+cd ~/OriginalHomeIOT
+python3 -m gateway.growatt --adapter USB-RS232
+```
+
+**The wired inverter connection isn’t operational yet:** no serial adapter is currently detected, and the older SPH6000 driver/register mapping still needs implementation and verification.
+
+OriginalHome remains connected to the OpenEMS demo.

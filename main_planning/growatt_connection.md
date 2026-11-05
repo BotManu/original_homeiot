@@ -47,3 +47,26 @@ To choose the USB Wi-Fi alternative, pass `--adapter ShineWiFi-X`. Switching ada
 For ShineWiFi-S, verify the inverter provides the compatible RS232 connector and pinout before attaching it; do not substitute an RS485 port. Join the deployment's 2.4 GHz Wi-Fi, record the datalogger identity separately from NUCPB2101P, and qualify the local receiver using actual uploads. Receiver and OpenEMS bridge implementation remain outstanding for both adapter choices. No physical connection can be tested while the dongle is off site.
 
 Manufacturer reference: [Growatt ShineWiFi-X and ShineWiFi-S instructions](https://cdn.growatt.com/user_manual_file/Growatt_Datalog_WIFI-X%26WIFI-S_Instrctions.pdf).
+
+## Direct wired USB-to-RS232 option
+
+`USB-RS232` is a third commissioning option. Topology: Pi USB port → USB-to-RS232 adapter → inverter's verified RS232 monitoring connector. This bypasses the Wi-Fi dongle. An RS485 converter or bare USB-to-TTL UART is not an interchangeable RS232 adapter. Confirm the manufacturer's connector pinout and cable arrangement before attaching equipment.
+
+Inspect the available Pi serial interfaces and current profile:
+
+```sh
+cd ~/OriginalHomeIOT
+python3 -m gateway.growatt
+```
+
+The JSON status includes `serial_ports`, with persistent `/dev/serial/by-id/…` paths when available and `/dev/ttyUSB…` or `/dev/ttyACM…` device nodes. Discovery only lists paths; it never opens a port or transmits a frame. The local UI also displays these paths.
+
+Select wired commissioning with:
+
+```sh
+python3 -m gateway.growatt --adapter USB-RS232
+```
+
+Additional CLI options are `--serial-port`, `--baud-rate`, `--parity` (`none`, `even`, `odd`), `--stop-bits` (`1` or `2`), and `--unit-id`. Supply values confirmed for the exact older SPH6000 firmware; none are guessed or automatically applied. The unit ID setting is reserved for a verified Modbus integration. Supported configuration values do not establish that a protocol/baud is supported by the inverter. Prefer a persistent by-id port when selecting the actual adapter. Ensure the OpenEMS service user has serial-device access when commissioning the real driver.
+
+Changing adapters clears previous transport settings and qualification. Changing serial settings invalidates the previous communication qualification. No port opens, register reads or inverter writes occur when saving this profile. `serial_driver_implemented` remains false: the installed OpenEMS image still requires a qualified older-SPH6000 serial driver/register map. The gateway UI continues to read the OpenEMS demo until that separate hardware integration is completed. Receiver work for Wi-Fi adapters is independent from this wired path.

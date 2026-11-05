@@ -64,7 +64,9 @@ async function refreshGrowatt() {
     const selected = profile.connection.adapter_model;
     el('growatt-state').textContent = profile.status.replaceAll('_', ' ');
     el('growatt-model').textContent = `${profile.manufacturer} ${profile.model}`;
-    el('growatt-adapter').textContent = `Selected: ${selected} · ${data.adapter_options[selected].inverter_interface} to Wi-Fi. Adapter choices: ${Object.keys(data.adapter_options).join(', ')}.`;
+    const adapter = data.adapter_options[selected];
+    const ports = (data.serial_ports || []).join(', ') || 'None detected';
+    el('growatt-adapter').textContent = `Selected: ${selected} · ${adapter.inverter_interface} to ${adapter.network_interface}. Adapter choices: ${Object.keys(data.adapter_options).join(', ')}. Pi serial ports: ${ports}.`;
     el('growatt-notice').textContent = data.notice;
   } catch {
     el('growatt-state').textContent = 'Profile unavailable';

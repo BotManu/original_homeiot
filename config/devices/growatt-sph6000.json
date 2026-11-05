@@ -13,6 +13,11 @@
     "adapter_firmware": null,
     "inverter_firmware": null,
     "local_ip": null,
+    "serial_port": null,
+    "baud_rate": null,
+    "parity": null,
+    "stop_bits": null,
+    "unit_id": null,
     "integration_method": "pending_qualification"
   },
   "qualification": {

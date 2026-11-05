@@ -40,6 +40,9 @@ class HTTPTests(unittest.TestCase):
                         if path == '/api/devices/growatt':
                             data = json.loads(body)
                             self.assertIn('ShineWiFi-S', data['adapter_options'])
+                            self.assertIn('USB-RS232', data['adapter_options'])
+                            self.assertIn('serial_ports', data)
+                            self.assertFalse(data['serial_driver_implemented'])
                             self.assertFalse(data['receiver_implemented'])
                 with self.assertRaises(urllib.error.HTTPError) as caught:
                     urllib.request.urlopen(urllib.request.Request(url + '/api/control', headers=headers, data=b'{}'), timeout=5)
