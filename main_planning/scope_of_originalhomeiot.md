@@ -45,7 +45,7 @@ Another Module is "Original Data Analysis Module": ODAM:
 4. It can offer predictions of the expected behaviours: lights or temperature states based on existing motion and many others.
 
 Another Module is "Original Intelligent Assistant":
-1. Can communicate to the other modules of course
+1. Can communicate to the other modules ofcourse
 2. Can organize scenarios
 3. Can communicate by voice to the user
 4. Can execute commands like: make the room warmer, is it warm enough at home, etc...
