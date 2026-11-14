@@ -1,5 +1,7 @@
 # OriginalHomeIOT local gateway
 
+> **Release 1 direction ? 14 November 2026:** energy only, with local OpenEMS inside OriginalHome, an OriginalHome cloud service on a real server, a qualified Linux/serial gateway and an initial technical VPP pilot. ThingsBoard and LoRa are deferred. See the [release scope and delivery plan](main_planning/release_1_energy_cloud_plan.md) and [server provisioning requirements](main_planning/cloud_server_requirements.md). The sections below describe existing code; optional ThingsBoard forwarding is legacy and should remain disabled for release 1. Cloud and equipment control are not yet implemented.
+
 First implementation slice: a local browser UI, read-only OpenEMS energy adapter, bounded SQLite history and optional durable ThingsBoard telemetry forwarding. Runs on Python 3.11+ using only the standard library. The UI loads entirely from the gateway; no CDN or internet connection is required.
 
 ## Run locally
@@ -67,6 +69,6 @@ Tests cover persisted offline delivery, retention overflow, retries with origina
 
 ## Next integration gates
 
-This is a development foundation, not the hardware-qualified pilot. Next: qualify the reference gateway and Growatt SPH6000 variant, connect an actual OpenEMS instance, verify measurements and freshness, then implement allowlisted strategy requests with authentication, expiry, duplicate rejection, bounds and observed feedback. Integrate general IoT device onboarding through ThingsBoard and add a production local identity/deployment profile. The local UI and later cloud UI will share normalized contracts while OpenEMS remains the sole energy writer.
+This is a development foundation, not the hardware-qualified pilot. Next: qualify the reference gateway and Growatt SPH6000 variant, connect an actual OpenEMS instance, verify measurements and freshness, then implement allowlisted strategy requests with authentication, expiry, duplicate rejection, bounds and observed feedback. Build the energy cloud connection, fleet enrollment and production local identity/deployment profile under the current release plan; general IoT and ThingsBoard are deferred. The local UI and later cloud UI will share normalized contracts while OpenEMS remains the sole energy writer.
 
 Protocol references: [OpenEMS REST implementation](https://github.com/OpenEMS/openems/blob/develop/io.openems.edge.controller.api.rest/src/io/openems/edge/controller/api/rest/RestHandler.java), [ThingsBoard HTTP telemetry](https://thingsboard.io/docs/reference/http-api/telemetry/). These are reference contracts; a specific installed release still needs qualification.

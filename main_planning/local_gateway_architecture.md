@@ -1,3 +1,5 @@
+> Release direction updated 14 November 2026: [energy-only release plan](release_1_energy_cloud_plan.md) and [cloud server requirements](cloud_server_requirements.md) are authoritative for release 1. ThingsBoard and LoRa are deferred; local OpenEMS, OriginalHome cloud, a physical gateway and a technical VPP pilot are the new baseline. Conflicting scope, topology and estimates below are historical.
+
 # Local gateway implementation baseline
 
 Owner clarifications, 5 November 2026:

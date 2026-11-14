@@ -1,3 +1,5 @@
+> Release direction updated 14 November 2026: [energy-only release plan](release_1_energy_cloud_plan.md) and [cloud server requirements](cloud_server_requirements.md) are authoritative for release 1. ThingsBoard and LoRa are deferred; local OpenEMS, OriginalHome cloud, a physical gateway and a technical VPP pilot are the new baseline. Conflicting scope, topology and estimates below are historical.
+
 # ThingsBoard integration plan
 
 Draft: 13 November 2026. Scope: integrate ThingsBoard into the existing OriginalHome platform, starting with the working Growatt installation on `original-volt-gateway`.

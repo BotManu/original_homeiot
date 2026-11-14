@@ -1,3 +1,5 @@
+> Release direction updated 14 November 2026: [energy-only release plan](release_1_energy_cloud_plan.md) and [cloud server requirements](cloud_server_requirements.md) are authoritative for release 1. ThingsBoard and LoRa are deferred; local OpenEMS, OriginalHome cloud, a physical gateway and a technical VPP pilot are the new baseline. Conflicting scope, topology and estimates below are historical.
+
 # OriginalHomeIOT implementation strategy
 
 > Superseded for initial delivery by [the 1 to 3 month implementation plan](implementation_plan_1_to_3_months.md), following review of `More_Realistic_Approach.docx` on 5 November 2026. The estimates below apply to the original broad custom-platform scope and are retained for reference. They are not the current MVP schedule.

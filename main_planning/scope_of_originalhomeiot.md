@@ -1,3 +1,5 @@
+> Release direction updated 14 November 2026: [energy-only release plan](release_1_energy_cloud_plan.md) and [cloud server requirements](cloud_server_requirements.md) are authoritative for release 1. ThingsBoard and LoRa are deferred; local OpenEMS, OriginalHome cloud, a physical gateway and a technical VPP pilot are the new baseline. Conflicting scope, topology and estimates below are historical.
+
 The main scope of this project  OriginalHomeIOT platform:
 1. It has to be an IOT platform suitable for home use
 2. It has a component that can be installed on a local gateway (Rpi / Olinuxino supported at the beginning)
