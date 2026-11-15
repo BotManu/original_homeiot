@@ -1,5 +1,13 @@
 # OriginalHomeIOT local gateway
 
+The first private cloud monitoring PoC is deployed at
+http://100.122.80.43:8080 through Tailscale, using the real Growatt gateway
+through native OpenEMS Backend connectivity. See the
+[cloud PoC runbook](deploy/poc/README.md) for login location, deployment,
+limitations and next steps. Source is in `cloud/`; equipment controls remain
+disabled pending qualification. This is an engineering milestone, not
+completion of release 1.
+
 > **Release 1 direction ? 14 November 2026:** energy only, with local OpenEMS inside OriginalHome, an OriginalHome cloud service on a real server, a qualified Linux/serial gateway and an initial technical VPP pilot. ThingsBoard and LoRa are deferred. See the [release scope and delivery plan](main_planning/release_1_energy_cloud_plan.md) and [server provisioning requirements](main_planning/cloud_server_requirements.md). The sections below describe existing code; optional ThingsBoard forwarding is legacy and should remain disabled for release 1. Cloud and equipment control are not yet implemented.
 
 First implementation slice: a local browser UI, read-only OpenEMS energy adapter, bounded SQLite history and optional durable ThingsBoard telemetry forwarding. Runs on Python 3.11+ using only the standard library. The UI loads entirely from the gateway; no CDN or internet connection is required.

@@ -1,0 +1,96 @@
+name: originalhome-poc
+services:
+  database:
+    image: ${POSTGRES_IMAGE:-postgres:17.7-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: originalhome
+      POSTGRES_USER: originalhome
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a unique database password}
+    volumes:
+      - business-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U originalhome -d originalhome']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 1g
+    logging: &logging
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+  app:
+    build:
+      context: ../..
+      dockerfile: cloud/Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim}
+    image: originalhome/cloud:poc-1
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://originalhome:${POSTGRES_PASSWORD}@database/originalhome
+      CLOUD_ADMIN_PASSWORD: ${CLOUD_ADMIN_PASSWORD:?Set an owner password}
+      COOKIE_SECURE: 'false'
+      OPENEMS_BACKEND_WS: ws://openems-backend:8082
+      OPENEMS_BACKEND_USER: cloud-reader
+      OPENEMS_BACKEND_PASSWORD: ${BACKEND_READER_PASSWORD}
+    ports:
+      - '${TAILSCALE_IP:?Set the server Tailscale address}:8080:8000'
+    depends_on:
+      database: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -c, 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/healthz", timeout=3)']
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    logging: *logging
+  identity:
+    image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:26.4.0}
+    command: [start-dev, --import-realm]
+    restart: unless-stopped
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://database:5432/originalhome_identity
+      KC_DB_USERNAME: originalhome
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HOSTNAME: http://identity:8080
+      KC_HTTP_ENABLED: 'true'
+      KC_HEALTH_ENABLED: 'true'
+    volumes:
+      - ./runtime/identity:/opt/keycloak/data/import:ro
+    # Internal authentication only. No published login/admin ports.
+    depends_on:
+      database: {condition: service_healthy}
+    mem_limit: 1g
+    logging: *logging
+  openems-backend:
+    image: openems/backend@sha256:7dc614a93693f82e3836681a3d426475fd278c15b2addb6560ef7243dc96ec71
+    restart: unless-stopped
+    volumes:
+      - ./runtime/backend:/var/opt/openems/config
+      - ./runtime/metadata.json:/var/opt/openems/metadata.json:ro
+      - ./runtime/openems-backend-file-cache-poc.jar:/opt/openems/openems-backend.jar:ro
+      - backend-data:/var/opt/openems/data
+    # Engineering console and internal RPC remain on host loopback.
+    ports: ['127.0.0.1:8079:8079', '127.0.0.1:8082:8082']
+    mem_limit: 2g
+    logging: *logging
+  openems-ingress:
+    image: openems/backend-edge@sha256:905f740a0040e2f0e5128d7e6cfde2ee7cdde2ba53f2e0b215204c3701aaea8f
+    restart: unless-stopped
+    volumes:
+      - ./runtime/ingress:/var/opt/openems/config
+      - ingress-data:/var/opt/openems/data
+    # ws is encrypted by the Tailscale tunnel for this private spike.
+    ports: ['${TAILSCALE_IP}:8081:8081', '127.0.0.1:8078:8078']
+    depends_on: [openems-backend]
+    mem_limit: 1g
+    logging: *logging
+volumes:
+  business-data:
+  backend-data:
+  ingress-data:

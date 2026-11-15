@@ -33,7 +33,7 @@ imports = ',\n '.join(sorted(packages))
 manifest = '''Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-SymbolicName: org.originalhome.growatt.readonly
-Bundle-Version: 0.1.0
+Bundle-Version: 0.1.1
 Bundle-Name: OriginalHome Growatt Read-only Telemetry
 Import-Package: {imports}
 Service-Component: OSGI-INF/component.xml

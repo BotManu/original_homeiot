@@ -1,0 +1,7 @@
+{
+  "backend": "openems/backend@sha256:7dc614a93693f82e3836681a3d426475fd278c15b2addb6560ef7243dc96ec71",
+  "ingress": "openems/backend-edge@sha256:905f740a0040e2f0e5128d7e6cfde2ee7cdde2ba53f2e0b215204c3701aaea8f",
+  "postgres": "postgres@sha256:bb377b7239d2774ac8cc76f481596ce96c5a6b5e9d141f6d0a0ee371a6e7c0f2",
+  "python": "python@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b",
+  "keycloak": "quay.io/keycloak/keycloak@sha256:5f3fb534cde6bf006d79f5912473e5d2c828c707cdfc52e16972803aca9d43dd"
+}

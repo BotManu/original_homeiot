@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import com.google.gson.JsonParser;
 import io.openems.common.channel.Level;
 import io.openems.common.channel.Unit;
+import io.openems.common.channel.PersistencePriority;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
@@ -16,12 +17,12 @@ import io.openems.edge.common.component.OpenemsComponent;
 /** Isolated telemetry channels: no managed ESS interface or writable channels. */
 public final class GrowattReadOnly extends AbstractOpenemsComponent implements EventHandler {
     public enum ChannelId implements io.openems.edge.common.channel.ChannelId {
-        PRODUCTION_ACTIVE_POWER(Doc.of(OpenemsType.INTEGER).unit(Unit.WATT)),
-        CONSUMPTION_ACTIVE_POWER(Doc.of(OpenemsType.INTEGER).unit(Unit.WATT)),
-        GRID_ACTIVE_POWER(Doc.of(OpenemsType.INTEGER).unit(Unit.WATT)),
-        ESS_ACTIVE_POWER(Doc.of(OpenemsType.INTEGER).unit(Unit.WATT)),
-        ESS_SOC(Doc.of(OpenemsType.INTEGER).unit(Unit.PERCENT)),
-        LAST_SUCCESSFUL_READ(Doc.of(OpenemsType.LONG)),
+        PRODUCTION_ACTIVE_POWER(Doc.of(OpenemsType.INTEGER).unit(Unit.WATT).remotePersistencePriority(PersistencePriority.HIGH)),
+        CONSUMPTION_ACTIVE_POWER(Doc.of(OpenemsType.INTEGER).unit(Unit.WATT).remotePersistencePriority(PersistencePriority.HIGH)),
+        GRID_ACTIVE_POWER(Doc.of(OpenemsType.INTEGER).unit(Unit.WATT).remotePersistencePriority(PersistencePriority.HIGH)),
+        ESS_ACTIVE_POWER(Doc.of(OpenemsType.INTEGER).unit(Unit.WATT).remotePersistencePriority(PersistencePriority.HIGH)),
+        ESS_SOC(Doc.of(OpenemsType.INTEGER).unit(Unit.PERCENT).remotePersistencePriority(PersistencePriority.HIGH)),
+        LAST_SUCCESSFUL_READ(Doc.of(OpenemsType.LONG).remotePersistencePriority(PersistencePriority.HIGH)),
         COMMUNICATION_FAILED(Doc.of(Level.FAULT).text("Growatt serial telemetry is unavailable or stale"));
         private final Doc doc;
         ChannelId(Doc doc) { this.doc = doc; }

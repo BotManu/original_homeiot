@@ -1,0 +1,11 @@
+{
+  "source_ref": "3eb006a1534d6bec562008e8f35083303baa98c2",
+  "upstream_sources_sha256": {
+    "Config.java": "da3db1c93a90b114a01077f8988680ae4dacafbc8aa0485f2706f652b1eba101",
+    "MyEdge.java": "3f8d4fef354d2c2437cb81bd0bce8c1fc17d0168bd77e05d256cb9171df92f9f",
+    "MetadataFile.java": "c402b1ce2e9f3aa7f43aab439c56e134154f86d22df6b9ee58a3963e64f6594c"
+  },
+  "vendor_jar_sha256": "6a16733eac4659decf79769b6333687e979ecbc116d2db2702b8ba884f4cfe6c",
+  "patched_jar_sha256": "0c04eb1d5f0f4788309cb259a0c3ad6095e569d15452c08c365677ee4c01a6d9",
+  "patch": "File metadata API-key to Edge-ID cache notification override"
+}

@@ -2,6 +2,16 @@
 
 Decision date: 14 November 2026. Status: agreed product direction; proposed engineering architecture and estimates. This document supersedes the release scope, topology and schedule in the older implementation, ThingsBoard and local gateway plans. It does not claim that the services below have been implemented or deployed.
 
+Implementation update, 15 November 2026: the first private monitoring PoC
+now runs on the real server and reads the first equipment gateway through
+native OpenEMS Backend/ingress. It adds an authenticated site dashboard,
+source timestamps/staleness, deduplicated seven-day monitoring projection
+and CSV export. The pinned compatibility spike required a File metadata
+cache mapping patch and HIGH remote priority on six read-only Growatt
+channels. See the [PoC runbook](../deploy/poc/README.md). Native timedata/replay,
+production identity/enrollment and equipment control remain outstanding;
+this update does not change the release acceptance gates below.
+
 ## Product decision
 
 Release 1 is an energy management product: OriginalHome provides the local application and cloud application; OpenEMS provides on-site energy integration and control. Use a real server and real equipment throughout integration. Keep simulators for repeatable failure tests, isolated from customer data and physical dispatch.

@@ -1,0 +1,12 @@
+.git
+local
+data
+__pycache__
+*.pyc
+*.tar.gz
+*.bundle
+.venv
+.env
+**/.env
+deploy/poc/runtime
+main_planning/Prompts

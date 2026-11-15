@@ -1,5 +1,14 @@
 # Growatt on-site connection
 
+15 November 2026 cloud PoC update: read-only bundle 0.1.1 sets HIGH remote
+persistence priority on the five measurements and `LastSuccessfulRead` so
+the native Backend receives fresh equipment observations. Hot-updated only
+this bundle, persisted it in the boot JAR, and preserved
+`~/original/openems-edge.pre-cloud-poc.jar`. The serial collector and local
+persistence settings are unchanged. No register writes were added. The
+private Backend connector is `ctrlOriginalHomeBackend0`; see the
+[cloud deployment runbook](../deploy/poc/README.md).
+
 Confirmed by the owner on 5 November 2026:
 
 - Inverter: older Growatt SPH6000, serial NUCPB2101P. Owner corrected the earlier BL-UP designation. Exact nameplate suffix and firmware still need on-site verification.
