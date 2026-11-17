@@ -44,6 +44,17 @@ class HTTPTests(unittest.TestCase):
                             self.assertIn('serial_ports', data)
                             self.assertTrue(data['serial_driver_implemented'])
                             self.assertFalse(data['receiver_implemented'])
+                command_headers = {**headers, 'Content-Type':'application/json', 'X-Gateway-Control':'1'}
+                body = json.dumps({'mode':'SOLAR_CHARGE','charge_w':2990,'duration_s':30}).encode()
+                with self.assertRaises(urllib.error.HTTPError) as caught:
+                    urllib.request.urlopen(urllib.request.Request(url + '/api/energy/control', headers=command_headers, data=body), timeout=5)
+                self.assertEqual(caught.exception.code, 409)
+                self.assertFalse(json.load(caught.exception)['applied'])
+                caught.exception.close()
+                with self.assertRaises(urllib.error.HTTPError) as caught:
+                    urllib.request.urlopen(urllib.request.Request(url + '/api/energy/control', headers=headers, data=body), timeout=5)
+                self.assertEqual(caught.exception.code, 403)
+                caught.exception.close()
                 with self.assertRaises(urllib.error.HTTPError) as caught:
                     urllib.request.urlopen(urllib.request.Request(url + '/api/control', headers=headers, data=b'{}'), timeout=5)
                 self.assertEqual(caught.exception.code, 405)

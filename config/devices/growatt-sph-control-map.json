@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "profile_id": "growatt-sph-raaa181703-scheduled-candidate",
+  "qualification": "native_write_and_mode_effect_verified_charge_calibration_pending",
+  "usable_for_live_writes": false,
+  "identity": {
+    "main_firmware": "RA1.0",
+    "build": "RAAA181703",
+    "control_firmware": "ZCBA-0003",
+    "model_code": "GT1100F25D",
+    "device_type_code": 3501,
+    "reported_protocol_word": 305,
+    "reported_serial": "9876543210",
+    "nameplate_serial": "NUCPB2101P"
+  },
+  "source": "https://www.amosplanet.org/wp-content/uploads/2023/06/Growatt-Inverter-Modbus-RTU-Protocol_II-V1_24-English.pdf",
+  "evidence": "tools/openems-growatt-control/evidence/control-map-read-2026-11-17.json",
+  "evidence_sha256": "7991e4a3818f5241b8893857469f3a97b4c114e43d560a87fb8180d0c33b969b",
+  "transport": {
+    "unit_id": 1,
+    "baudrate": 9600,
+    "format": "8N1",
+    "read_function": 3
+  },
+  "candidate_controls": {
+    "priority_status": {
+      "register": 1044,
+      "access": "read_only",
+      "observed": 0
+    },
+    "battery_first_charge_percent": {
+      "register": 1090,
+      "range": [
+        0,
+        100
+      ],
+      "observed": 100
+    },
+    "battery_first_stop_soc": {
+      "register": 1091,
+      "range": [
+        0,
+        100
+      ],
+      "observed": 100
+    },
+    "battery_first_ac_charge": {
+      "register": 1092,
+      "range": [
+        0,
+        1
+      ],
+      "observed": 0
+    },
+    "battery_first_slots": [
+      {
+        "start": 1100,
+        "end": 1101,
+        "enable": 1102
+      },
+      {
+        "start": 1103,
+        "end": 1104,
+        "enable": 1105
+      },
+      {
+        "start": 1106,
+        "end": 1107,
+        "enable": 1108
+      }
+    ],
+    "grid_first_discharge_percent": {
+      "register": 1070,
+      "observed": 100
+    },
+    "grid_first_stop_soc": {
+      "register": 1071,
+      "observed": 10
+    },
+    "grid_first_slots": [
+      {
+        "start": 1080,
+        "end": 1081,
+        "enable": 1082
+      },
+      {
+        "start": 1083,
+        "end": 1084,
+        "enable": 1085
+      },
+      {
+        "start": 1086,
+        "end": 1087,
+        "enable": 1088
+      }
+    ]
+  },
+  "time_encoding": "(hour << 8) | minute; use inverter clock, not gateway wall clock",
+  "excluded_write_addresses": [
+    1008,
+    1039,
+    1040,
+    1041,
+    1042,
+    1043,
+    1044,
+    1045,
+    1046,
+    1047,
+    1048
+  ],
+  "charge_reference_w": null,
+  "remaining_evidence": [
+    "Verify charging percentage-to-watts behavior with fresh solar surplus",
+    "Verify charge limit under changing PV and load",
+    "Qualify communication/process-loss recovery and daily-slot cleanup before general activation"
+  ],
+  "no_hardware_setting_writes_performed": true,
+  "verified_write_registers": [
+    1090,
+    1100,
+    1101,
+    1102
+  ],
+  "charge_write_function": 6,
+  "schedule_write_function": 16,
+  "commissioning_verification": "tools/openems-growatt-control/commissioning-verification.json"
+}

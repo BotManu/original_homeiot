@@ -1,5 +1,11 @@
 # OriginalHomeIOT local gateway
 
+Native OpenEMS now has a schedule driver and bounded hardware commissioning.
+Charge-percentage writes and timed strategy activation have been tested on the
+inverter. **General control remains disarmed pending charging-power calibration;
+the configured 2.99 kW ceiling is not claimed as a globally enforced limit.**
+See [control commissioning](tools/openems-growatt-control/README.md).
+
 The first private cloud monitoring PoC is deployed at
 http://100.122.80.43:8080 through Tailscale, using the real Growatt gateway
 through native OpenEMS Backend connectivity. See the

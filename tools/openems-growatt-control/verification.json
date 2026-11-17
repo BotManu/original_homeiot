@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-17",
+  "repository_tests_passed": 24,
+  "native_power_bound_cases_passed": 740,
+  "native_bundle_sha256": "ace113318e118b62b5a7436bc17554b57851c650aa354f44bea7a6e684f9e01a",
+  "native_serial_read_verified": true,
+  "native_advancing_samples": 3,
+  "original_collector_restored": true,
+  "native_strategy_state": "shadow",
+  "physical_writes_enabled": false,
+  "owner_requested_max_charge_w": 2500,
+  "owner_ceiling_applied_to_hardware": false,
+  "observed_firmware_registers": {
+    "9": 21057,
+    "10": 12590,
+    "11": 12320,
+    "12": 23107,
+    "13": 16961,
+    "14": 3
+  },
+  "observed_protocol_register_88": 305,
+  "native_source_files_sha256": {
+    "tools/openems-growatt-control/src/originalhome/growatt/control/ControlPolicy.java": "4823b7aefd0d15cadeba075f6b56f907eb3a3c5737455f1b15a36f89fa0bffb8",
+    "tools/openems-growatt-control/src/originalhome/growatt/control/GrowattControlDriver.java": "38ff5c2931beba3aa51640dddb2aeac071a254c7315dc8b8599979b53d7571aa",
+    "tools/openems-growatt-control/src/originalhome/growatt/control/GrowattStrategyController.java": "1e77239eb59049eac986e382a40cbb6f2e675042d76996ff0993027c20f086d6"
+  }
+}

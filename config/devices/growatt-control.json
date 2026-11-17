@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "writes_enabled": false,
+  "max_charge_w": 2990,
+  "min_discharge_soc": 0,
+  "owner_authorized_live_commissioning": true,
+  "inverter_limits_applied": false,
+  "charge_percent_reference_w": null,
+  "max_soc": 100,
+  "max_soc_source": "Retain observed battery-first stop SoC at holding 1091 (100%); no SoC protection setting is changed",
+  "owner_battery_description": {
+    "approximate_capacity_kwh": 3.5,
+    "approximate_nominal_voltage_v": 50
+  },
+  "observed_identity": {
+    "display_model_code": "GT1100F25D",
+    "firmware_ascii": "RA1.0 ",
+    "control_firmware_hex": "5a4342410003",
+    "protocol_register_88": 305,
+    "reported_serial": "9876543210",
+    "nameplate_serial": "NUCPB2101P",
+    "firmware_build": "RAAA181703",
+    "control_firmware": "ZCBA-0003",
+    "device_type_code": 3501
+  },
+  "qualification": {
+    "firmware_register_map_verified": false,
+    "identity_verified": false,
+    "charge_percentage_reference_verified": false,
+    "single_serial_owner_verified": false,
+    "inverter_discharge_reserve_verified": false,
+    "crash_and_communication_fallback_verified": false
+  },
+  "owner_discharge_reserve_requirement_withdrawn": true,
+  "candidate_control_map": "config/devices/growatt-sph-control-map.json"
+}

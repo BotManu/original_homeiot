@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.3.0" name="OriginalHome.Growatt.ControlDriver" configuration-policy="require" immediate="true" activate="activate" deactivate="deactivate">
+  <implementation class="originalhome.growatt.control.GrowattControlDriver"/>
+  <service>
+    <provide interface="io.openems.edge.common.component.OpenemsComponent"/>
+    <provide interface="io.openems.edge.bridge.modbus.api.ModbusComponent"/>
+    <provide interface="originalhome.growatt.control.GrowattControlDriver"/>
+  </service>
+  <property name="id" value="growattControl0"/>
+  <property name="enabled" type="Boolean" value="true"/>
+  <reference name="modbus" interface="io.openems.edge.bridge.modbus.api.BridgeModbus" cardinality="0..1" policy="dynamic" target="(id=modbusGrowattNative0)" bind="bindModbus" unbind="unbindModbus"/>
+</scr:component>

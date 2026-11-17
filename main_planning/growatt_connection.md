@@ -1,5 +1,13 @@
 # Growatt on-site connection
 
+18 November 2026 control work: the native driver uses FC06 at 1090 and an
+indivisible FC16 schedule triple at 1100?1102. Actual writes/readback and
+battery-first activation have been tested, with restoration after each trial.
+General interface writes remain disarmed pending physical charge calibration.
+The owner withdrew the extra 15% reserve; the requested ceiling remains 2990 W.
+Firmware is RA1.0 / RAAA181703 / ZCBA-0003. See the
+[native commissioning record](../tools/openems-growatt-control/README.md).
+
 15 November 2026 cloud PoC update: read-only bundle 0.1.1 sets HIGH remote
 persistence priority on the five measurements and `LastSuccessfulRead` so
 the native Backend receives fresh equipment observations. Hot-updated only

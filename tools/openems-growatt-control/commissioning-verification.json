@@ -1,0 +1,36 @@
+{
+  "date": "2026-11-18",
+  "evidence": "tools/openems-growatt-control/evidence/native-schedule-test-20261118-012501.json",
+  "evidence_sha256": "82c80b5b3e955ea1e03883a47970f2a494d204919e17d91347c10ee681a8fdad",
+  "writer": "native OpenEMS Modbus bridge",
+  "charge_cap_register": 1090,
+  "charge_write_function": 6,
+  "schedule_registers": [
+    1100,
+    1101,
+    1102
+  ],
+  "schedule_write_function": 16,
+  "cap_reduction_and_restoration_readback_verified": true,
+  "strategy_activation_readback_verified": true,
+  "night_battery_hold_physical_response_verified": true,
+  "night_battery_hold_samples": 37,
+  "inverter_timed_expiry_verified": true,
+  "expiry_before_software_cleanup": true,
+  "expiry_observed_ms": 1794958035001,
+  "active_first_ms": 1794957922989,
+  "active_to_expiry_seconds": 112.012,
+  "original_settings_restored": true,
+  "collector_restored": true,
+  "charging_power_calibration_verified": false,
+  "charge_percentage_reference_w": null,
+  "general_control_enabled": false,
+  "requested_max_charge_w": 2990,
+  "global_inverter_charge_limit_verified": false,
+  "tests": {
+    "python_gateway_tests_passed": 17,
+    "native_power_bound_cases": 880,
+    "native_clock_lease_cases": 10800,
+    "atomic_fc16_payload_checks_passed": true
+  }
+}

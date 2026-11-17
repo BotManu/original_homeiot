@@ -74,3 +74,32 @@ async function refreshGrowatt() {
   } finally { setTimeout(refreshGrowatt, 15000); }
 }
 refreshGrowatt();
+
+let controlReady = false;
+function updateControlButton() { el('strategy-submit').disabled = el('strategy').value !== 'MONITOR' && !controlReady; }
+async function refreshControl() {
+  try {
+    const response = await fetch('/api/energy/control', {signal: AbortSignal.timeout(8000)});
+    if (!response.ok) throw new Error();
+    const data = await response.json();
+    controlReady = !data.stale && data.writes_enabled && data.native_transport_bound && Object.keys(data.qualification || {}).length >= 6 && Object.entries(data.qualification).every(([k,v]) => v === true || (k === 'inverter_discharge_reserve_verified' && data.min_discharge_soc === 0));
+    el('control-status').textContent = `${data.status}: ${data.reason}. Hardware writes ${controlReady ? 'enabled' : 'blocked'}. Physical effect verified: ${data.physical_effect_verified === true ? 'yes' : 'no'}.`;
+    el('control-blockers').replaceChildren();
+    for (const [key, value] of Object.entries(data.qualification || {})) {
+      if (value !== true && !(key === 'inverter_discharge_reserve_verified' && data.min_discharge_soc === 0)) { const li = document.createElement('li'); li.textContent = key.replaceAll('_', ' '); el('control-blockers').append(li); }
+    }
+  } catch { controlReady = false; el('control-status').textContent = 'Controller unavailable. Hardware state unconfirmed.'; }
+  updateControlButton(); setTimeout(refreshControl, 5000);
+}
+el('strategy').addEventListener('change', updateControlButton);
+el('strategy-form').addEventListener('submit', async event => {
+  event.preventDefault(); el('strategy-submit').disabled = true;
+  try {
+    const mode = el('strategy').value;
+    const response = await fetch('/api/energy/control', {method:'POST', headers:{'Content-Type':'application/json','X-Gateway-Control':'1'}, body:JSON.stringify({mode,charge_w:mode === 'MONITOR' ? 0 : Number(el('charge-w').value),duration_s:Number(el('duration').value)}), signal:AbortSignal.timeout(8000)});
+    const result = await response.json();
+    el('command-result').textContent = response.ok ? `Request ${result.command_id} submitted; application unconfirmed.` : result.error;
+  } catch { el('command-result').textContent = 'Response unavailable. Check controller status before retrying.'; }
+  updateControlButton();
+});
+refreshControl();

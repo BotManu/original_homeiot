@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.3.0" name="OriginalHome.Growatt.Strategy" immediate="true" activate="activate" deactivate="deactivate">
+  <implementation class="originalhome.growatt.control.GrowattStrategyController"/>
+  <service>
+    <provide interface="io.openems.edge.common.component.OpenemsComponent"/>
+    <provide interface="io.openems.edge.controller.api.Controller"/>
+  </service>
+  <property name="id" value="ctrlGrowattStrategy0"/>
+  <property name="enabled" type="Boolean" value="true"/>
+  <reference name="componentManager" interface="io.openems.edge.common.component.ComponentManager" bind="bindManager"/>
+  <reference name="driver" interface="originalhome.growatt.control.GrowattControlDriver" cardinality="0..1" policy="dynamic" target="(id=growattControl0)" bind="bindDriver" unbind="unbindDriver"/>
+</scr:component>

@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 
 from .core import OpenEMS, Settings, Store, forward
 from .growatt import connection_status
+from .energy_control import status as energy_control_status, submit as submit_energy_control
 
 
 def main():
@@ -85,7 +86,12 @@ def main():
             if not self.authorized():
                 return
             path = urlsplit(self.path).path
-            if path == "/api/devices/growatt":
+            if path == "/api/energy/control":
+                try:
+                    self.send_body(200, json.dumps(energy_control_status(), allow_nan=False).encode())
+                except (OSError, ValueError, KeyError):
+                    self.send_body(503, b'{"error":"Native energy control status unavailable"}')
+            elif path == "/api/devices/growatt":
                 try:
                     self.send_body(200, json.dumps(connection_status()).encode())
                 except (OSError, ValueError, KeyError):
@@ -107,8 +113,35 @@ def main():
                 self.send_body(404, b'{"error":"Not found"}')
 
         def do_POST(self):
-            if self.authorized():
-                self.send_body(405, b'{"error":"Energy writes are disabled pending equipment qualification"}')
+            if not self.authorized():
+                return
+            if urlsplit(self.path).path != "/api/energy/control":
+                self.send_body(405, b'{"error":"Unsupported command endpoint"}')
+                return
+            # Require a custom header and a matching browser origin to prevent
+            # ambient Basic credentials from authorizing cross-site commands.
+            origin = self.headers.get("Origin")
+            if (self.headers.get("X-Gateway-Control") != "1"
+                    or (origin and urlsplit(origin).netloc != self.headers.get("Host"))):
+                self.send_body(403, b'{"error":"Same-origin gateway command required"}')
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                if not 0 < length <= 2048:
+                    raise ValueError("Invalid command size")
+                if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
+                    raise ValueError("JSON command required")
+                command = json.loads(self.rfile.read(length))
+                if not isinstance(command, dict) or set(command) != {"mode", "charge_w", "duration_s"}:
+                    raise ValueError("Expected mode, charge_w and duration_s")
+                result = submit_energy_control(**command)
+                self.send_body(202, json.dumps(result).encode())
+            except PermissionError as error:
+                self.send_body(409, json.dumps({"error":str(error), "applied":False}).encode())
+            except (ValueError, TypeError) as error:
+                self.send_body(400, json.dumps({"error":str(error)}).encode())
+            except OSError:
+                self.send_body(503, b'{"error":"Native command storage unavailable"}')
 
     server = ThreadingHTTPServer((host, int(os.getenv("GATEWAY_PORT", "8080"))), Handler)
     for worker in (collect, deliver):
