@@ -35,6 +35,9 @@ public final class GrowattControlDriver extends AbstractOpenemsModbusComponent {
     private final Map<String, Number> raw = new ConcurrentHashMap<>();
     private volatile long identityAt, firmwareAt, protocolAt, settingsAt, telemetryAt, pvAt, reserveAt, priorityAt, clockAt, slotsAt;
     private final UnsignedWordElement chargeWrite = new UnsignedWordElement(1090);
+    private final UnsignedWordElement acWrite=new UnsignedWordElement(1092);
+    private final UnsignedWordElement socWrite=new UnsignedWordElement(1091);
+    private Integer commissioningOriginalSoc;
     private final ScheduleSlotElement slotWrite = new ScheduleSlotElement();
     private Integer commissioningOriginalCap;
     private Integer plannedStart, plannedEnd;
@@ -47,7 +50,15 @@ public final class GrowattControlDriver extends AbstractOpenemsModbusComponent {
         super.activate(context, "growattControl0", "Growatt candidate bounded charge interface", true, 1);
     }
     @Override protected void deactivate() { clearPendingWrites(); super.deactivate(); }
-    protected void bindModbus(BridgeModbus bridge) { super.setModbus(bridge); }
+    protected void bindModbus(BridgeModbus bridge) {
+        super.setModbus(bridge);
+        // The base setter only stores the reference. If DS binds the bridge
+        // after activate(), register the protocol here as well.
+        if(getUnitId()!=null && isEnabled()) {
+            bridge.addProtocol(id(),getModbusProtocol());
+            bridge.retryModbusCommunication(id());
+        }
+    }
     protected void unbindModbus(BridgeModbus bridge) { clearPendingWrites(); super.unsetModbus(bridge); }
 
     private void put(String key, Number value) {
@@ -105,7 +116,8 @@ public final class GrowattControlDriver extends AbstractOpenemsModbusComponent {
                 })),
             // Only documented battery-first charge and first-slot registers can be written.
             // No AC-charge gate, protection, battery chemistry, export or test registers.
-            new FC6WriteRegisterTask(1090,chargeWrite), new FC16WriteRegistersTask(1100,slotWrite));
+            new FC6WriteRegisterTask(1090,chargeWrite), new FC6WriteRegisterTask(1091,socWrite),
+            new FC6WriteRegisterTask(1092,acWrite), new FC16WriteRegistersTask(1100,slotWrite));
     }
 
     public boolean transportBound() { return getBridgeModbus()!=null; }
@@ -151,7 +163,7 @@ public final class GrowattControlDriver extends AbstractOpenemsModbusComponent {
             "battery_voltage_v",raw.get("voltage").doubleValue()/10);
     }
     synchronized void clearPendingWrites() {
-        chargeWrite.setNextWriteValue(null); slotWrite.setNextWriteValue(null);
+        chargeWrite.setNextWriteValue(null); acWrite.setNextWriteValue(null); socWrite.setNextWriteValue(null); slotWrite.setNextWriteValue(null);
     }
     public Map<String,Object> diagnostics() {
         var result=new java.util.LinkedHashMap<String,Object>();
@@ -164,7 +176,7 @@ public final class GrowattControlDriver extends AbstractOpenemsModbusComponent {
         var sample=snapshot(now);
         if(!transportBound() || !sample.identityMatches() || !fresh(settingsAt,now)
                 || !fresh(priorityAt,now) || !fresh(telemetryAt,now) || !fresh(clockAt,now)
-                || !fresh(slotsAt,now) || !Integer.valueOf(0).equals(integer("ac"))) return false;
+                || !fresh(slotsAt,now) || integer("ac")==null || integer("ac")<0 || integer("ac")>1) return false;
         for(var key : new String[]{"enable2","enable3","gEnable1","gEnable2","gEnable3"})
             if(!Integer.valueOf(0).equals(integer(key))) return false;
         return true;
@@ -184,10 +196,15 @@ public final class GrowattControlDriver extends AbstractOpenemsModbusComponent {
         String result=slot(integer("start"),integer("end"),0);
         return result==null ? "readback_confirmed" : result;
     }
-    private String schedule(int cap,long until,long now) {
+    private String stopCharging() {
+        String result=set(acWrite,"ac",0,"ac_disable");
+        return result==null ? disableSlot() : result;
+    }
+    private String schedule(int cap,int targetSoc,boolean grid,long until,long now) {
         String result;
-        if((plannedStart==null || plannedUntil!=until) && !Integer.valueOf(0).equals(integer("enable")))
-            return disableSlot();
+        if((plannedStart==null || plannedUntil!=until) &&
+                (!Integer.valueOf(0).equals(integer("enable")) || !Integer.valueOf(0).equals(integer("ac"))))
+            return stopCharging();
         result=set(chargeWrite,"charge",cap,"charge_cap"); if(result!=null) return result;
         if(plannedStart==null || plannedUntil!=until) {
             try {
@@ -195,26 +212,29 @@ public final class GrowattControlDriver extends AbstractOpenemsModbusComponent {
                 plannedStart=window.start(); plannedEnd=window.end(); plannedUntil=until;
             } catch(IllegalArgumentException invalid) { return "lease_too_short_for_hardware_schedule"; }
         }
-        if(now>=until) return disableSlot();
+        if(now>=until) return stopCharging();
+        result=set(socWrite,"stopSoc",targetSoc,"target_soc"); if(result!=null) return result;
+        result=set(acWrite,"ac",grid ? 1 : 0,"ac_charge"); if(result!=null) return result;
         result=slot(plannedStart,plannedEnd,1); if(result!=null) return result;
         return Integer.valueOf(1).equals(integer("priority")) ? "strategy_readback_confirmed" : "awaiting_priority_transition";
     }
-    /** Explicit short commissioning session; never enables AC charge or export. */
+    /** Explicit short commissioning session; grid-charge tests are explicit; export is never enabled. */
     synchronized String commission(String phase,long until,long now) {
         clearPendingWrites();
         if(!prerequisites(now)) return "commissioning_gate_closed";
         if(commissioningOriginalCap==null) {
             if(!Integer.valueOf(0).equals(integer("enable")) || !Integer.valueOf(0).equals(integer("priority")))
                 return "commissioning_requires_idle_slot";
-            commissioningOriginalCap=integer("charge");
+            commissioningOriginalCap=integer("charge"); commissioningOriginalSoc=integer("stopSoc");
             if(commissioningOriginalCap==null || commissioningOriginalCap<0 || commissioningOriginalCap>100)
                 return "invalid_original_cap";
         }
-        if(phase.equals("DISABLE") || now>=until) return disableSlot();
+        if(phase.equals("DISABLE") || now>=until) return stopCharging();
         if(phase.equals("RESTORE")) {
-            String result=disableSlot(); if(!result.equals("readback_confirmed")) return result;
+            String result=stopCharging(); if(!result.equals("readback_confirmed")) return result;
             if(!Integer.valueOf(0).equals(integer("priority"))) return "awaiting_load_first";
             result=slot(0,0,0); if(result!=null) return result;
+            result=set(socWrite,"stopSoc",commissioningOriginalSoc,"restore_soc"); if(result!=null) return result;
             result=set(chargeWrite,"charge",commissioningOriginalCap,"restore_cap");
             return result==null ? "restoration_readback_confirmed" : result;
         }
@@ -223,10 +243,14 @@ public final class GrowattControlDriver extends AbstractOpenemsModbusComponent {
             String result=set(chargeWrite,"charge",10,"commissioning_cap");
             return result==null ? "cap_readback_confirmed" : result;
         }
-        if(phase.equals("SLOT")) return schedule(10,until,now);
+        if(phase.equals("SLOT")) return schedule(10,commissioningOriginalSoc,false,until,now);
+        if(phase.equals("GRID_SLOT") || phase.equals("GRID_SLOT_33")) {
+            if(integer("soc")==null || integer("soc")>=90) return stopCharging();
+            return schedule(phase.equals("GRID_SLOT_33") ? 33 : 10,90,true,until,now);
+        }
         return "unknown_commissioning_phase";
     }
-    synchronized String apply(ControlPolicy.Decision decision, ControlPolicy.Limits limits, long until, long now) {
+    synchronized String apply(ControlPolicy.Decision decision, ControlPolicy.Limits limits, long until, int targetSoc, long now) {
         clearPendingWrites();
         if(!decision.writable() || !limits.writesEnabled() || !limits.protocolQualified()
                 || !limits.identityQualified() || !limits.powerMappingQualified() || !limits.singleSerialOwner()
@@ -234,7 +258,7 @@ public final class GrowattControlDriver extends AbstractOpenemsModbusComponent {
         int cap=decision.chargePercent();
         if(cap<0 || cap>100 || (long)cap*limits.chargePercentReferenceW()>limits.maxChargeW()*100L)
             return "invalid_native_target";
-        if(decision.priority()==0 || decision.fallback()) return disableSlot();
-        return schedule(cap,until,now);
+        if(decision.priority()==0 || decision.fallback()) return stopCharging();
+        return schedule(cap,targetSoc,decision.gridCharge(),until,now);
     }
 }

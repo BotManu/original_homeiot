@@ -3,7 +3,8 @@
 18 November 2026 control work: the native driver uses FC06 at 1090 and an
 indivisible FC16 schedule triple at 1100?1102. Actual writes/readback and
 battery-first activation have been tested, with restoration after each trial.
-General interface writes remain disarmed pending physical charge calibration.
+Controls are now armed at 1000 W following operating-rate and real restart
+recovery qualification. The night plan is 02:00?05:00 Europe/Bucharest to 90%.
 The owner withdrew the extra 15% reserve; the requested ceiling remains 2990 W.
 Firmware is RA1.0 / RAAA181703 / ZCBA-0003. See the
 [native commissioning record](../tools/openems-growatt-control/README.md).

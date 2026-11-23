@@ -1,0 +1,26 @@
+{
+  "evidence": "tools/openems-growatt-control/evidence/native-grid-test-20261118-015032.json",
+  "sha256": "60044caf2377d7751a4eed31fbe16cb373a072f4afbbd3bfaf8c139ab4e32d58",
+  "grid_charge_verified": true,
+  "expiry_verified": true,
+  "settings_restored": true,
+  "collector_restored": true,
+  "test_charge_percent": 10,
+  "target_soc_readback": 90,
+  "samples": 24,
+  "median_battery_charge_w": 225.5,
+  "median_grid_import_w": 680.0,
+  "night_window": {
+    "start": "02:00",
+    "end": "05:00",
+    "timezone": "Europe/Bucharest",
+    "target_soc": 90,
+    "requested_charge_w": 1000
+  },
+  "automatic_charging_armed": false,
+  "remaining_qualification": [
+    "charge-rate verification at intended operating power",
+    "serial ownership for continuous operation",
+    "restart/communication-loss recovery"
+  ]
+}

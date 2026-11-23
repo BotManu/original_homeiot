@@ -25,14 +25,17 @@ def phase(name,duration=120):
  atomic(FOLDER/'growatt-commission.json',{'phase':name,'until_ms':until})
  print('Native commissioning phase: '+name,flush=True)
  return until
-result={'hardware_writes_authorized':True,'general_control_enabled':False,'observations':[],'original_settings_restored':False}
+grid_test='--grid' in sys.argv
+operating_test='--operating-rate' in sys.argv
+if operating_test and not grid_test:raise SystemExit('Operating-rate test requires --grid')
+result={'operating_rate_test':operating_test,'grid_charge_test':grid_test,'hardware_writes_authorized':True,'general_control_enabled':False,'observations':[],'original_settings_restored':False}
 policy_path=FOLDER/'growatt-control.json';policy=json.loads(policy_path.read_text())
 assert policy['writes_enabled'] is False and not policy.get('commissioning_enabled')
 assert not bridges() and not get('/system/console/configMgr/OriginalHome.Growatt.ControlDriver.json')
 assert Path(PORT).exists()
 assert subprocess.run(['systemctl','--user','is-active','--quiet','originalhome-growatt-serial']).returncode==0
 created=False;baseline=None;armed=False
-out=ROOT/'data/commissioning'/('native-schedule-test-'+time.strftime('%Y%m%d-%H%M%S')+'.json')
+out=ROOT/'data/commissioning'/(('native-grid-test-' if grid_test else 'native-schedule-test-')+time.strftime('%Y%m%d-%H%M%S')+'.json')
 print('Evidence: '+str(out),flush=True)
 def current():
  p=FOLDER/'growatt-commission-status.json'
@@ -78,7 +81,7 @@ try:
  phase('CAP')
  cap=wait_for(lambda d:d['status']=='cap_readback_confirmed' and d['readback'].get('charge')==10,60)
  result['cap_write_readback_verified']=True;print('1090 charge cap read back at 10%',flush=True)
- phase('SLOT',180)
+ phase(('GRID_SLOT_33' if operating_test else 'GRID_SLOT') if grid_test else 'SLOT',180)
  active=wait_for(lambda d:d['status']=='strategy_readback_confirmed' and d['readback'].get('priority')==1,65)
  result['timed_strategy_readback_verified']=True
  print('Battery-first priority read back active',flush=True)
@@ -89,7 +92,7 @@ try:
    r=d['readback'];t=d.get('telemetry',{});v=t.get('values',{})
    if t.get('available') and r.get('priority')==1:
     if not measured or measured[-1]['ts']!=t['ts']:measured.append(t)
-    if v.get('battery_w',0)<-2990:raise RuntimeError('Measured charging exceeds owner ceiling')
+    if v.get('battery_w',0)<-(1000 if operating_test else 2990):raise RuntimeError('Measured charging exceeds owner ceiling')
    end_min=(r.get('end',0)>>8)*60+(r.get('end',0)&255)
    now_min=r.get('hour',0)*60+r.get('minute',0)
    if r.get('enable')==1 and now_min>end_min and r.get('priority')==0:
@@ -99,7 +102,7 @@ try:
  result['active_samples']=measured
  # Require sustained charging response with enough PV to avoid attributing
  # a passing cloud or unavailable battery to the charge-power command.
- useful=[s for s in measured if s['values']['solar_w']-s['values']['load_w']>1500 and -750<=s['values']['battery_w']<=-100]
+ useful=[s for s in measured if -(1000 if operating_test else 750)<=s['values']['battery_w']<=-(400 if operating_test else 100) and ((grid_test and s['values']['solar_w']<50 and s['values']['grid_w']>s['values']['load_w']+100) or (not grid_test and s['values']['solar_w']-s['values']['load_w']>1500))]
  result['bounded_physical_response_verified']=len(useful)>=3
  result['outcome']='completed' if result['bounded_physical_response_verified'] else 'readback_verified_physical_response_inconclusive'
 except Exception as error:
@@ -109,7 +112,7 @@ finally:
  try:
   if armed:
    phase('RESTORE',90)
-   restored=wait_for(lambda d:d['status']=='restoration_readback_confirmed' and d['readback'].get('charge')==baseline['charge'] and all(d['readback'].get(k)==0 for k in ['start','end','enable','priority']),80)
+   restored=wait_for(lambda d:d['status']=='restoration_readback_confirmed' and d['readback'].get('charge')==baseline['charge'] and d['readback'].get('stopSoc')==baseline['stopSoc'] and d['readback'].get('ac')==baseline['ac'] and all(d['readback'].get(k)==0 for k in ['start','end','enable','priority']),80)
    result['original_settings_restored']=True
    print('Original charge cap and disabled schedule restored by readback',flush=True)
  except Exception as error:

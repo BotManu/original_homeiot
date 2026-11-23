@@ -1,0 +1,28 @@
+{
+  "date": "2026-11-18",
+  "gateway": "original-volt-gateway",
+  "armed": true,
+  "operating_charge_limit_w": 1000,
+  "owner_charge_ceiling_w": 2990,
+  "night_plan": {
+    "enabled": true,
+    "timezone": "Europe/Bucharest",
+    "start": "02:00",
+    "end": "05:00",
+    "charge_w": 1000,
+    "target_soc": 90
+  },
+  "measured_operating_charge_w": [
+    930,
+    970
+  ],
+  "restart_recovery_verified": true,
+  "stale_request_not_replayed": true,
+  "sole_serial_owner": "native OpenEMS",
+  "legacy_collector": "disabled",
+  "rate_reference_w": 3000,
+  "reference_interpretation": "conservative power bound qualified through 33%; higher rates remain unqualified",
+  "evidence": "tools/openems-growatt-control/evidence/arming-verification.json",
+  "evidence_sha256": "375ccf78b22e3ad47dd6c72a1b6fc870583383697076a95827a95efed731d941",
+  "identity_basis": "Owner-identified wired inverter and stable Modbus model/firmware fingerprint; reported placeholder serial retained"
+}

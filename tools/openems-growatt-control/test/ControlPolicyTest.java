@@ -40,7 +40,11 @@ public final class ControlPolicyTest {
         check(!ControlPolicy.decide(new Limits(2990,3000,90,15,true,true,true,true,true,false),request(1000),sample(),NOW,false).writable(),"Shadow mode cannot write");
         check(!ControlPolicy.decide(new Limits(2990,3000,90,15,true,true,true,false,true,true),request(1000),sample(),NOW,false).writable(),"Two serial owners forbidden");
         check(!ControlPolicy.decide(limits(),request(1000),new Snapshot(NOW-16000,61,-1000,0,100,0,true,15,15),NOW,false).writable(),"Reject stale equipment");
-        check(!ControlPolicy.decide(limits(),request(1000),new Snapshot(NOW,61,-1000,0,100,1,true,15,15),NOW,false).writable(),"No grid-charge enablement");
+        check(ControlPolicy.decide(limits(),request(1000),new Snapshot(NOW,61,-1000,0,100,1,true,15,15),NOW,false).fallback(),"Solar transition disables AC charging first");
+        var grid=new Request(ID,Mode.GRID_CHARGE,500,NOW-1000,NOW+30000,90);
+        check(ControlPolicy.decide(limits(),grid,sample(),NOW,false).gridCharge(),"Grid mode explicitly authorizes AC charging");
+        check(ControlPolicy.decide(limits(),grid,new Snapshot(NOW,90,-1000,1,10,1,true,15,15),NOW,true).fallback(),"Target SoC stops grid charging");
+        check(ControlPolicy.decide(limits(),null,new Snapshot(NOW,61,-1000,1,10,1,true,15,15),NOW,false).fallback(),"AC charging is cleared on cancellation even without active lease");
         check(!ControlPolicy.decide(limits(),request(1000),new Snapshot(NOW,61,-1000,2,100,0,true,15,15),NOW,false).writable(),"No export strategy");
         check(!ControlPolicy.decide(limits(),request(1000),new Snapshot(NOW,61,-1000,0,100,0,false,15,15),NOW,false).writable(),"Reject wrong device");
         check(ControlPolicy.decide(limits(),request(1000),new Snapshot(NOW,90,-1000,0,100,0,true,15,15),NOW,false).fallback(),"Stop at SoC ceiling");

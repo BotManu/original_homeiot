@@ -29,7 +29,8 @@
     "charge_percentage_reference_verified": false,
     "single_serial_owner_verified": false,
     "inverter_discharge_reserve_verified": false,
-    "crash_and_communication_fallback_verified": false
+    "crash_and_communication_fallback_verified": false,
+    "grid_charging_verified": false
   },
   "owner_discharge_reserve_requirement_withdrawn": true,
   "candidate_control_map": "config/devices/growatt-sph-control-map.json"

@@ -118,11 +118,14 @@
   "no_hardware_setting_writes_performed": true,
   "verified_write_registers": [
     1090,
+    1091,
+    1092,
     1100,
     1101,
     1102
   ],
   "charge_write_function": 6,
   "schedule_write_function": 16,
-  "commissioning_verification": "tools/openems-growatt-control/commissioning-verification.json"
+  "commissioning_verification": "tools/openems-growatt-control/commissioning-verification.json",
+  "grid_charge_verification": "tools/openems-growatt-control/grid-charge-verification.json"
 }

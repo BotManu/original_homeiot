@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "timezone": "Europe/Bucharest",
+  "start": "02:00",
+  "end": "05:00",
+  "charge_w": 1000,
+  "target_soc": 90
+}

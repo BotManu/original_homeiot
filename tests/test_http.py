@@ -15,7 +15,7 @@ class HTTPTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             env = {key: value for key, value in os.environ.items() if not key.startswith(('GATEWAY_', 'OPENEMS_', 'THINGSBOARD_'))}
             env.update(GATEWAY_PORT='0', GATEWAY_HOST='127.0.0.1', GATEWAY_MODE='demo',
-                       GATEWAY_DATA=folder, GATEWAY_PASSWORD='test-password')
+                       GATEWAY_DATA=folder, GATEWAY_CONTROL_FOLDER=folder, GATEWAY_PASSWORD='test-password')
             process = subprocess.Popen([sys.executable, '-m', 'gateway'], env=env,
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             try:
@@ -44,6 +44,10 @@ class HTTPTests(unittest.TestCase):
                             self.assertIn('serial_ports', data)
                             self.assertTrue(data['serial_driver_implemented'])
                             self.assertFalse(data['receiver_implemented'])
+                schedule_headers={**headers,'Content-Type':'application/json','X-Gateway-Control':'1'}
+                request=urllib.request.Request(url+'/api/energy/night-schedule',headers=schedule_headers,data=b'{"enabled":true}')
+                with urllib.request.urlopen(request,timeout=5) as response:
+                    self.assertTrue(json.load(response)['night_schedule']['enabled'])
                 command_headers = {**headers, 'Content-Type':'application/json', 'X-Gateway-Control':'1'}
                 body = json.dumps({'mode':'SOLAR_CHARGE','charge_w':2990,'duration_s':30}).encode()
                 with self.assertRaises(urllib.error.HTTPError) as caught:

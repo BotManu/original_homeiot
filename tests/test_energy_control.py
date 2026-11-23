@@ -18,8 +18,30 @@ class EnergyControlTests(unittest.TestCase):
             with self.assertRaises(ValueError):build_request('SOLAR_CHARGE',watts)
         for seconds in [0,181,True,1.5]:
             with self.assertRaises(ValueError):build_request('SOLAR_CHARGE',1000,seconds)
-        for mode in ['GRID_CHARGE','FORCED_DISCHARGE','GRID_EXPORT','unknown']:
+        for mode in ['FORCED_DISCHARGE','GRID_EXPORT','unknown']:
             with self.assertRaises(ValueError):build_request(mode,1000)
+
+    def test_grid_charge_target_and_bounds(self):
+        command=build_request('GRID_CHARGE',500,180,target_soc=90)
+        self.assertEqual(command['target_soc'],90)
+        with self.assertRaises(ValueError):build_request('GRID_CHARGE',0)
+        for target in (0,101,True,90.5):
+            with self.assertRaises(ValueError):build_request('GRID_CHARGE',500,target_soc=target)
+
+    def test_active_operating_limit_is_checked_before_submission(self):
+        from gateway.energy_control import submit
+        with patch('gateway.energy_control.status',return_value={'max_charge_w':1000}):
+            with self.assertRaises(ValueError):submit('GRID_CHARGE',1001)
+
+    def test_ready_requires_fresh_equipment_and_current_qualifications(self):
+        from gateway.energy_control import controls_ready,REQUIRED_GATES
+        data={'writes_enabled':True,'native_transport_bound':True,'observed_ms':100000,
+              'min_discharge_soc':0,'qualification':{k:True for k in REQUIRED_GATES}}
+        data['qualification']['inverter_discharge_reserve_verified']=False
+        self.assertTrue(controls_ready(data,now_ms=101000))
+        self.assertFalse(controls_ready(data,now_ms=116000))
+        data['qualification']['crash_and_communication_fallback_verified']=False
+        self.assertFalse(controls_ready(data,now_ms=101000))
 
     def test_cancel_and_stale_status_do_not_claim_applied_control(self):
         with self.assertRaises(ValueError):build_request('MONITOR',1000)

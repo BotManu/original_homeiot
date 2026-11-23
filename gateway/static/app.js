@@ -34,7 +34,7 @@ async function refresh() {
       : demo ? 'Simulator mode · These are example measurements. No equipment is connected and no commands are sent.'
       : simulatedEdge ? 'Connected to the local OpenEMS demo system · Measurements come from OpenEMS, but do not represent verified physical equipment. Energy writes are disabled.'
       : data.data_origin !== 'equipment' ? 'Reading OpenEMS locally · Equipment origin and sensor freshness have not been verified. Energy writes are disabled.'
-      : 'Reading OpenEMS locally. Energy writes are disabled until equipment qualification is complete.';
+      : data.control_enabled ? 'Local inverter control is armed. Charging follows the selected strategy and night schedule below.' : 'Reading OpenEMS locally. Energy writes are disabled until equipment qualification is complete.';
     const v = data.latest?.values;
     el('solar').textContent = power(v?.solar_w); el('load').textContent = power(v?.load_w);
     el('grid').textContent = power(v?.grid_w); el('soc').textContent = v ? `${v.battery_soc}%` : '—';
@@ -43,7 +43,7 @@ async function refresh() {
     el('updated').textContent = data.latest ? `${data.stale ? 'Last recorded' : 'Recorded'} ${new Date(data.latest.ts).toLocaleTimeString()}` : 'No measurements yet';
     el('source-name').textContent = demo ? 'Energy simulator' : 'OpenEMS Edge';
     el('source').textContent = data.source;
-    el('source-detail').textContent = demo ? 'Example energy flows for interface development.' : simulatedEdge ? 'Read-only connection to the existing OpenEMS demo installation.' : 'Read-only connection to local energy channels.';
+    el('source-detail').textContent = demo ? 'Example energy flows for interface development.' : simulatedEdge ? 'Read-only connection to the existing OpenEMS demo installation.' : data.control_enabled ? 'Local measurements and qualified inverter control.' : 'Read-only connection to local energy channels.';
     el('delivery').textContent = data.delivery;
     el('queue').textContent = `${data.buffer.pending} samples awaiting delivery · ${data.buffer.dropped} unsent samples dropped at capacity.`;
     el('retention').textContent = `Up to ${data.buffer.capacity.toLocaleString()} samples retained. Oldest samples are removed at capacity.`;
@@ -76,14 +76,18 @@ async function refreshGrowatt() {
 refreshGrowatt();
 
 let controlReady = false;
+let nightEnabled = false;
 function updateControlButton() { el('strategy-submit').disabled = el('strategy').value !== 'MONITOR' && !controlReady; }
 async function refreshControl() {
   try {
     const response = await fetch('/api/energy/control', {signal: AbortSignal.timeout(8000)});
     if (!response.ok) throw new Error();
     const data = await response.json();
-    controlReady = !data.stale && data.writes_enabled && data.native_transport_bound && Object.keys(data.qualification || {}).length >= 6 && Object.entries(data.qualification).every(([k,v]) => v === true || (k === 'inverter_discharge_reserve_verified' && data.min_discharge_soc === 0));
-    el('control-status').textContent = `${data.status}: ${data.reason}. Hardware writes ${controlReady ? 'enabled' : 'blocked'}. Physical effect verified: ${data.physical_effect_verified === true ? 'yes' : 'no'}.`;
+    el('charge-w').max=data.max_charge_w;
+    controlReady = data.control_ready === true;
+    if(data.night_schedule) { nightEnabled=data.night_schedule.enabled; el('night-schedule-toggle').textContent=nightEnabled ? 'Pause automatic night charging' : 'Enable automatic night charging'; }
+    if(data.night_schedule) el('night-schedule-status').textContent = `Night grid charging: ${data.night_schedule.start}?${data.night_schedule.end} ${data.night_schedule.timezone}; target ${data.night_schedule.target_soc}%, ${(data.night_schedule.charge_w/1000).toFixed(2)} kW. ${data.night_schedule.enabled ? 'Scheduled; native qualification required.' : 'Disabled.'}`;
+    el('control-status').textContent = `${data.status}: ${data.reason}. Operating cap ${(data.max_charge_w/1000).toFixed(2)} kW. Hardware writes ${controlReady ? 'enabled' : 'blocked'}. Physical effect verified: ${data.physical_effect_verified === true ? 'yes' : 'no'}.`;
     el('control-blockers').replaceChildren();
     for (const [key, value] of Object.entries(data.qualification || {})) {
       if (value !== true && !(key === 'inverter_discharge_reserve_verified' && data.min_discharge_soc === 0)) { const li = document.createElement('li'); li.textContent = key.replaceAll('_', ' '); el('control-blockers').append(li); }
@@ -96,10 +100,21 @@ el('strategy-form').addEventListener('submit', async event => {
   event.preventDefault(); el('strategy-submit').disabled = true;
   try {
     const mode = el('strategy').value;
-    const response = await fetch('/api/energy/control', {method:'POST', headers:{'Content-Type':'application/json','X-Gateway-Control':'1'}, body:JSON.stringify({mode,charge_w:mode === 'MONITOR' ? 0 : Number(el('charge-w').value),duration_s:Number(el('duration').value)}), signal:AbortSignal.timeout(8000)});
+    const response = await fetch('/api/energy/control', {method:'POST', headers:{'Content-Type':'application/json','X-Gateway-Control':'1'}, body:JSON.stringify({mode,charge_w:mode === 'MONITOR' ? 0 : Number(el('charge-w').value),duration_s:Number(el('duration').value),target_soc:Number(el('target-soc').value)}), signal:AbortSignal.timeout(8000)});
     const result = await response.json();
     el('command-result').textContent = response.ok ? `Request ${result.command_id} submitted; application unconfirmed.` : result.error;
   } catch { el('command-result').textContent = 'Response unavailable. Check controller status before retrying.'; }
   updateControlButton();
 });
 refreshControl();
+
+el('night-schedule-toggle').addEventListener('click',async () => {
+  el('night-schedule-toggle').disabled=true;
+  try {
+    const response=await fetch('/api/energy/night-schedule',{method:'POST',headers:{'Content-Type':'application/json','X-Gateway-Control':'1'},body:JSON.stringify({enabled:!nightEnabled}),signal:AbortSignal.timeout(8000)});
+    const data=await response.json();
+    el('command-result').textContent=response.ok ? `Night schedule ${data.night_schedule.enabled ? 'enabled' : 'paused'}: ${data.state.replaceAll('_',' ')}. Hardware application remains subject to OpenEMS qualification.` : data.error;
+    if(response.ok) {nightEnabled=data.night_schedule.enabled;el('night-schedule-toggle').textContent=nightEnabled ? 'Pause automatic night charging' : 'Enable automatic night charging';}
+  } catch {el('command-result').textContent='Unable to update night schedule.';}
+  el('night-schedule-toggle').disabled=false;
+});

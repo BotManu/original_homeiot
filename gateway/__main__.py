@@ -11,7 +11,8 @@ from urllib.parse import urlsplit
 
 from .core import OpenEMS, Settings, Store, forward
 from .growatt import connection_status
-from .energy_control import status as energy_control_status, submit as submit_energy_control
+from .energy_control import status as energy_control_status, submit as submit_energy_control, FOLDER as CONTROL_FOLDER, atomic_private_write, controls_ready
+from .night_schedule import run as run_night_schedule, config as night_config, tick as tick_night_schedule
 
 
 def main():
@@ -26,6 +27,7 @@ def main():
     password = os.getenv("GATEWAY_PASSWORD", "")
     if (host not in ("127.0.0.1", "::1", "localhost") or settings.mode != "demo") and not password:
         raise SystemExit("Set GATEWAY_PASSWORD before enabling LAN access or live mode")
+    control_folder=Path(os.getenv("GATEWAY_CONTROL_FOLDER",str(CONTROL_FOLDER)))
     folder = Path(os.getenv("GATEWAY_DATA", "data")) / settings.mode
     folder.mkdir(parents=True, exist_ok=True)
     store = Store(folder / "gateway.sqlite3", settings.capacity)
@@ -55,6 +57,12 @@ def main():
                 with lock:
                     state["delivery"] = status
             stop.wait(settings.interval)
+
+    def control_is_ready():
+        try:
+            return settings.mode!="demo" and controls_ready(energy_control_status(control_folder))
+        except (OSError,ValueError,KeyError):
+            return False
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, format, *args):
@@ -88,7 +96,10 @@ def main():
             path = urlsplit(self.path).path
             if path == "/api/energy/control":
                 try:
-                    self.send_body(200, json.dumps(energy_control_status(), allow_nan=False).encode())
+                    data=energy_control_status(control_folder)
+                    data['night_schedule']=night_config(control_folder)
+                    data['control_ready']=controls_ready(data)
+                    self.send_body(200, json.dumps(data, allow_nan=False).encode())
                 except (OSError, ValueError, KeyError):
                     self.send_body(503, b'{"error":"Native energy control status unavailable"}')
             elif path == "/api/devices/growatt":
@@ -103,7 +114,7 @@ def main():
                 with lock:
                     result = dict(state)
                 result.update(mode=settings.mode, data_origin="simulated" if settings.mode == "demo" else settings.data_origin, stale=stale, latest=latest,
-                              history=list(reversed(samples)), buffer=store.status(), control_enabled=False)
+                              history=list(reversed(samples)), buffer=store.status(), control_enabled=control_is_ready())
                 self.send_body(200, json.dumps(result, allow_nan=False).encode())
             elif path in ("/", "/app.js", "/style.css"):
                 name = {"/": "index.html", "/app.js": "app.js", "/style.css": "style.css"}[path]
@@ -115,7 +126,7 @@ def main():
         def do_POST(self):
             if not self.authorized():
                 return
-            if urlsplit(self.path).path != "/api/energy/control":
+            if urlsplit(self.path).path not in ("/api/energy/control", "/api/energy/night-schedule"):
                 self.send_body(405, b'{"error":"Unsupported command endpoint"}')
                 return
             # Require a custom header and a matching browser origin to prevent
@@ -132,9 +143,19 @@ def main():
                 if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
                     raise ValueError("JSON command required")
                 command = json.loads(self.rfile.read(length))
-                if not isinstance(command, dict) or set(command) != {"mode", "charge_w", "duration_s"}:
+                if urlsplit(self.path).path == "/api/energy/night-schedule":
+                    if not isinstance(command,dict) or set(command)!={"enabled"} or type(command['enabled']) is not bool:
+                        raise ValueError("Expected enabled boolean")
+                    plan=night_config(control_folder);plan['enabled']=command['enabled']
+                    atomic_private_write(control_folder/'growatt-night-schedule.json',plan)
+                    try: schedule_state=tick_night_schedule(control_folder)
+                    except (OSError,ValueError,KeyError): schedule_state='schedule_unavailable'
+                    result={'night_schedule':plan,'state':schedule_state,'hardware_applied':False}
+                    self.send_body(200,json.dumps(result).encode())
+                    return
+                if not isinstance(command, dict) or (not {"mode", "charge_w", "duration_s"} <= set(command) or set(command)-{"mode", "charge_w", "duration_s", "target_soc"}):
                     raise ValueError("Expected mode, charge_w and duration_s")
-                result = submit_energy_control(**command)
+                result = submit_energy_control(**command,folder=control_folder)
                 self.send_body(202, json.dumps(result).encode())
             except PermissionError as error:
                 self.send_body(409, json.dumps({"error":str(error), "applied":False}).encode())
@@ -143,6 +164,7 @@ def main():
             except OSError:
                 self.send_body(503, b'{"error":"Native command storage unavailable"}')
 
+    threading.Thread(target=run_night_schedule,args=(stop,control_folder),daemon=True).start()
     server = ThreadingHTTPServer((host, int(os.getenv("GATEWAY_PORT", "8080"))), Handler)
     for worker in (collect, deliver):
         threading.Thread(target=worker, daemon=True).start()

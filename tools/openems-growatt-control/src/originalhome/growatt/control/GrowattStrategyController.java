@@ -122,7 +122,7 @@ public final class GrowattStrategyController extends AbstractOpenemsComponent im
                 request=new ControlPolicy.Request(body.get("command_id").getAsString(),
                     ControlPolicy.Mode.valueOf(body.get("mode").getAsString()),
                     integer(body,"charge_w",0),body.get("issued_ms").getAsBigDecimal().longValueExact(),
-                    body.get("expires_ms").getAsBigDecimal().longValueExact());
+                    body.get("expires_ms").getAsBigDecimal().longValueExact(),integer(body,"target_soc",90));
                 requestedW=request.chargeW();
                 if(burnedId.equals(request.id()) && !activeId.equals(request.id())) {
                     request=null; reason="command_not_replayed_after_restart";
@@ -147,13 +147,18 @@ public final class GrowattStrategyController extends AbstractOpenemsComponent im
                 atomicWrite(folder.resolve("growatt-commission-status.json"),diagnostic);
                 return;
             }
+            long recoveryUntil=profile.has("recovery_test_until_ms") ? profile.get("recovery_test_until_ms").getAsBigDecimal().longValueExact() : 0;
+            boolean recoveryTest=recoveryUntil>now && recoveryUntil-now<=180000;
             var decision=ControlPolicy.decide(limits,request,sample,now,previouslyApplied);
             if(!decision.writable()) {
                 if(driver!=null) driver.clearPendingWrites();
                 reason=decision.reason(); state=enabled ? "blocked" : "shadow";
             } else if(driver==null || !driver.transportBound()) {
                 reason="native_serial_bridge_not_bound"; state="blocked";
-            } else if(!bool(qualification,"crash_and_communication_fallback_verified")) {
+            } else if(decision.gridCharge() && !bool(qualification,"grid_charging_verified")) {
+                reason="grid_charging_not_qualified";state="blocked";driver.clearPendingWrites();
+            } else if(!bool(qualification,"crash_and_communication_fallback_verified")
+                    && !recoveryTest && !(decision.fallback() && previouslyApplied)) {
                 reason="inverter_fallback_not_qualified"; state="blocked"; driver.clearPendingWrites();
             } else {
                 if(request!=null && !request.id().equals(activeId) && !decision.fallback()) {
@@ -165,7 +170,7 @@ public final class GrowattStrategyController extends AbstractOpenemsComponent im
                 }
                 target=decision.chargePercent();
                 if(now-lastAttemptMs>=5000) {
-                    state=driver.apply(decision,limits,request==null ? now : request.expiresMs(),now); lastAttemptMs=now;
+                    state=driver.apply(decision,limits,request==null ? now : request.expiresMs(),request==null || request.targetSoc()==0 ? limits.maxSoc() : Math.min(limits.maxSoc(),request.targetSoc()),now); lastAttemptMs=now;
                 } else state="awaiting_readback";
                 reason=decision.reason();
                 if(decision.fallback() && state.equals("readback_confirmed")) {
@@ -181,8 +186,8 @@ public final class GrowattStrategyController extends AbstractOpenemsComponent im
             info.put("target_charge_percent",target);info.put("native_transport_bound",driver!=null && driver.transportBound());
             info.put("physical_effect_verified",false);
             if(driver!=null) info.put("register_readback",driver.diagnostics());
-            info.put("supported_modes",List.of("MONITOR","SELF_CONSUMPTION","SOLAR_CHARGE"));
-            info.put("unsupported_modes",List.of("GRID_CHARGE","FORCED_DISCHARGE","GRID_EXPORT","TARIFF_OPTIMIZATION"));
+            info.put("supported_modes",List.of("MONITOR","SELF_CONSUMPTION","SOLAR_CHARGE","GRID_CHARGE"));
+            info.put("unsupported_modes",List.of("FORCED_DISCHARGE","GRID_EXPORT","TARIFF_OPTIMIZATION"));
             info.put("qualification",qualification);
             if(sample!=null) {
                 info.put("observed_ms",sample.observedMs()); info.put("battery_soc",sample.soc());

@@ -1,7 +1,8 @@
 # Native Growatt strategy commissioning
 
 The gateway has a native OpenEMS schedule driver and a local strategy form.
-General interface writes remain disarmed pending charging-power calibration.
+Controls on original-volt-gateway are armed at an initial 1000 W operating
+limit. The nightly 02:00?05:00 Europe/Bucharest plan targets 90%.
 The owner withdrew the extra 15% reserve; existing inverter protection is unchanged.
 The requested charge ceiling remains 2990 W; this is not claimed as a globally
 enforced inverter limit.
@@ -13,7 +14,8 @@ enforced inverter limit.
   `ScheduleSlotElement` represents the entire triple as one native element,
   so the bridge cannot emit a partially queued schedule.
 - Holding 1044: priority readback only. No writes to 1044 or 1045 remain.
-- Holding 1092: AC-charge readback only; it must remain zero.
+- Holding 1091: per-strategy charge-stop SoC, written before charging.
+- Holding 1092: explicit AC-charge enable for GRID_CHARGE only; cleared first on cancellation.
 - No writes to grid-first, protection, chemistry, test or factory registers.
 
 Python only submits trusted private JSON commands/configuration. All physical
@@ -82,5 +84,57 @@ request; the orchestrator removes both authority and request during cleanup.
 
 The authenticated local form submits short-lived requests; submission is not
 application. Missing qualification returns HTTP 409, cross-origin/missing
-custom header returns 403, and unsupported endpoints return 405. Grid charging,
-forced discharge, export and tariff optimization remain outside this version.
+custom header returns 403, and unsupported endpoints return 405. Forced discharge, export and price-driven optimization remain outside this version.
+
+## Grid charging and nightly window ? 18 November
+
+GRID_CHARGE now sets a bounded charge percentage and target SoC before enabling
+AC charging and the timed slot. Cancel, expiry, target reached and a switch to
+solar/self-consumption disable AC charging first. A grid-specific qualification
+gate is checked in both Python submission and the native controller.
+
+The real night trial passed: 10% charge request, target 90%, zero PV, median
+battery charging 225.5 W across 24 samples. Grid import increased above home
+consumption. The inverter timed mode expired, AC charging was disabled, and
+the original 100% cap/100% stop SoC/empty disabled slot were restored.
+See [grid-charge-verification.json](grid-charge-verification.json).
+This establishes working grid charging, not a calibrated full-range watt map.
+
+The owner's night window is 02:00?05:00 Europe/Bucharest. The configured initial
+request is 1000 W to a 90% target, under the 2990 W owner ceiling. The local
+planner submits rolling <=180-second leases, stops at target/outside the window,
+and respects an unexpired manual request. The local UI can pause/enable the
+night plan separately from submitting an individual strategy. Saving the plan
+does not arm unqualified hardware. The gateway is now armed at 1000 W after the operating-rate and restart tests.
+
+Private schedule: ~/.config/originalhome/growatt-night-schedule.json.
+Planner state: growatt-night-status.json. The gateway polls every 15 seconds.
+Use the Linux system timezone database; Windows development requires tzdata
+for Europe/Bucharest. Timezone-aware planner tests were run on the Pi.
+
+## Armed deployment ? 18 November
+
+See [armed-controls.json](armed-controls.json) and the saved arming evidence.
+A 33% request measured 930?970 W. The live profile caps requests at 1000 W;
+the owner ceiling remains 2990 W and higher operating rates remain unqualified.
+The 3000 W percentage reference is a conservative bound for the tested range,
+not a claim that every requested watt is delivered exactly.
+
+A real OpenEMS service restart exposed late bridge binding without protocol
+registration. The driver now registers its protocol when a bridge binds after
+activation. The repeated cold-start test resumed fresh readings, cleared AC
+charging and the daily slot, and cleared the durable fallback marker without
+replaying the old request. The test authority expired independently; the broad
+recovery qualification was recorded only after the real test passed.
+
+The legacy Python serial collector is disabled. OpenEMS owns the adapter and
+publishes telemetry into the existing sample contract. The local gateway and
+night planner remain active. The UI shows armed readiness only with fresh
+native equipment readings and all required qualifications. API requests above
+the live operating limit are rejected before submission.
+
+Before maintenance: pause the night plan, cancel the active request and verify
+AC=0 and slot enable=0. Disarm the private policy before removing the native
+bridge or returning serial ownership to the legacy collector. Do not run a
+direct serial probe while the native bridge owns the adapter. Shadow deployment
+and commissioning scripts deliberately refuse the currently armed configuration.

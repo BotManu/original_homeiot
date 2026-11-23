@@ -1,17 +1,16 @@
 # OriginalHomeIOT local gateway
 
-Native OpenEMS now has a schedule driver and bounded hardware commissioning.
-Charge-percentage writes and timed strategy activation have been tested on the
-inverter. **General control remains disarmed pending charging-power calibration;
-the configured 2.99 kW ceiling is not claimed as a globally enforced limit.**
+Local inverter controls are armed on the Pi with an initial 1 kW operating
+limit. The nightly grid-charge plan runs 02:00?05:00 Europe/Bucharest to a 90%
+target. Operating-rate and real OpenEMS restart-recovery tests passed. The owner
+ceiling remains 2.99 kW; higher operating rates are not yet qualified.
 See [control commissioning](tools/openems-growatt-control/README.md).
 
 The first private cloud monitoring PoC is deployed at
 http://100.122.80.43:8080 through Tailscale, using the real Growatt gateway
 through native OpenEMS Backend connectivity. See the
 [cloud PoC runbook](deploy/poc/README.md) for login location, deployment,
-limitations and next steps. Source is in `cloud/`; equipment controls remain
-disabled pending qualification. This is an engineering milestone, not
+limitations and next steps. Source is in `cloud/`; equipment control runs locally on the Pi. This is an engineering milestone, not
 completion of release 1.
 
 > **Release 1 direction ? 14 November 2026:** energy only, with local OpenEMS inside OriginalHome, an OriginalHome cloud service on a real server, a qualified Linux/serial gateway and an initial technical VPP pilot. ThingsBoard and LoRa are deferred. See the [release scope and delivery plan](main_planning/release_1_energy_cloud_plan.md) and [server provisioning requirements](main_planning/cloud_server_requirements.md). The sections below describe existing code; optional ThingsBoard forwarding is legacy and should remain disabled for release 1. Cloud and equipment control are not yet implemented.
