@@ -202,3 +202,22 @@ Sanitized summary:
 Detailed observations and recovery records remain under the board's
 `~/OriginalHomeIOT/data/commissioning/`. Authenticated live monitoring was
 verified after final cleanup.
+
+## Armed operation — 25 November 2026
+
+At the owner's explicit request, enabled the qualified native control policy
+with its 1000 W operating ceiling and enabled the 02:00–05:00
+Europe/Bucharest night plan at 1000 W to 90% SoC. The owner ceiling remains
+2990 W; higher operating rates are still unqualified.
+
+Preflight confirmed synchronized time, fresh idle native readback, one Java
+serial owner, no pending fallback, no temporary commissioning authority or
+old command, and the saved successful write/restart qualification. Native
+readiness and the authenticated control API confirmed armed state and the
+configured plan. At activation, the planner was outside its window; AC
+charging and the inverter slot remained disabled. No immediate manual
+charge request was submitted. Both services remain enabled for startup.
+
+Previous private policy/plan/status were preserved on the board in
+`data/commissioning/olinuxino-pre-arm-20261125.json`. The arming snapshot is
+[olinuxino-armed-20261125.json](../tools/openems-growatt-control/evidence/olinuxino-armed-20261125.json).

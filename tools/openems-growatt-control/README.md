@@ -149,8 +149,11 @@ OpenEMS restart without replaying the old request. See
 [gateway commissioning](../../main_planning/olinuxino_gateway.md) and
 [sanitized evidence](evidence/olinuxino-control-validation-20261124.json).
 
-Olinuxino control is **qualified at the initial 1000 W level but disarmed**;
-its night plan remains disabled. Final readback verified AC=0, load-first,
+Olinuxino control was qualified at the initial 1000 W level on 24 November
+and **armed on 25 November at the owner's request**. Its 02:00–05:00
+Europe/Bucharest night plan is enabled at 1000 W to 90% SoC. See the
+[arming record](evidence/olinuxino-armed-20261125.json).
+Final commissioning readback verified AC=0, load-first,
 empty disabled slots, original 33% cap and 90% stop SoC. The Pi-specific
 collector handoff scripts above are historical procedures; do not run them
 unchanged against the Olinuxino's existing native bridge. Update its actual
