@@ -64,11 +64,11 @@ Persistent IPv4/IPv6 filtering rejects non-loopback access to OpenEMS
 ports 8081 and 8084. These ports are for SSH-tunnel/board-local maintenance.
 ThingsBoard forwarding is disabled.
 
-The native serial bridge is staged disabled with the existing Prolific
-adapter's stable path, 9600 baud, 8N1. The native control policy is disarmed
-and the night planner is disabled. No Pi command, recovery ledger or armed
-policy was copied to this board. Null equipment channels are expected
-until the adapter is moved and fresh reads are verified.
+The native serial bridge was initially staged disabled with the existing
+Prolific adapter's stable path, 9600 baud, 8N1. It was enabled and validated
+for real reads on 24 November. The native control policy remains disarmed
+and the night planner remains disabled. No Pi command, recovery ledger or
+armed policy was copied to this board.
 
 ## Cloud identity
 
@@ -77,8 +77,9 @@ The existing server is `100.122.80.43`; owner login remains the existing
 
 The new native Edge identity is `original-home-olinuxino`, with a unique
 private API key. Its site is `olinuxino-home`, displayed as
-`Olinuxino gateway`, and owned by the same `admin` membership. Origin is
-`unverified` during commissioning. The existing Pi's `first-home` site,
+`Olinuxino gateway`, and owned by the same `admin` membership. Origin was
+initially `unverified` and became `equipment` after real-read validation on
+24 November. The existing Pi's `first-home` site,
 gateway API key and history were preserved. The server's prior metadata
 was backed up privately as `metadata.pre-olinuxino.json`.
 
@@ -91,8 +92,9 @@ schedule enable=0 and fallback_required=false. Its private policy was
 then disarmed. Previous policy/schedule files are preserved in the Pi's
 `~/.config/originalhome/olinuxino-migration-backup/`.
 
-The owner subsequently reported that the adapter had **not moved yet**.
-Do not describe Olinuxino equipment telemetry or control as commissioned.
+On 23 November the owner reported that the adapter had **not moved yet**.
+On 24 November the owner confirmed that it was connected to the Olinuxino;
+read-only serial validation is recorded below. Control is not commissioned.
 Before enabling control, move the physical adapter, verify its exact stable
 device path, give the new service process dialout membership, enable only
 the new native bridge, and verify advancing equipment samples and identity.
@@ -111,6 +113,92 @@ enabled services, OpenEMS Backend/REST/custom components and authenticated
 UI access from the PC over Tailscale recovered. No failed system units were
 reported. REST authentication also survived reboot.
 
-Remaining acceptance checks are the physical serial migration, fresh local
-and cloud equipment telemetry, and board-specific control recovery before
-re-arming control or the night planner.
+Board-specific control recovery subsequently passed on 24 November, as
+recorded below. General control and the night planner remain disabled.
+
+## Inverter read validation — 24 November 2026
+
+Found the original Prolific adapter as `/dev/ttyUSB0`, with stable path
+`/dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller_CYBCb2A5414-if00-port0`.
+The Java service has dialout membership. Physical control policy and the
+night planner were confirmed disabled before serial activation.
+
+An initial activation exposed two configurations with component ID
+`modbusGrowattNative0`: the staged disabled configuration and a newly
+created enabled factory instance. Felix's factory POST creates a new UUID
+instance even when a descriptive PID is supplied. The disabled duplicate
+was backed up privately and removed; OpenEMS was restarted to bind the
+driver to the single retained enabled bridge. Future updates must discover
+and use the actual existing configuration PID without `factoryPid`.
+
+At 9600 baud, 8N1, the native driver produced four advancing, fresh,
+available samples. Its identity gate matched model code `GT1100F25D`
+and reported serial `9876543210`, consistent with the previous Pi reader.
+The previously documented difference from nameplate `NUCPB2101P` remains
+unresolved; this test does not establish a new nameplate match.
+
+Initial observations: battery 68%, 52.9 V, approximately 630–636 W
+discharge, household load approximately 630 W, near-zero grid power and
+near-zero nighttime PV. Small nonzero nighttime PV readings are retained
+as measured; this is not daylight generation qualification. The inverter
+clock was roughly eight minutes behind the gateway during the test; do not
+restore timed charging without the existing clock/lease checks.
+
+`fuser` confirmed one serial owner: the OpenEMS Java process. Native
+readback showed AC charging disabled and all schedule enable flags zero.
+No physical write authority was enabled. Local source origin was changed
+to `equipment` after successful native identity/freshness checks; the
+authenticated local UI returned connected, non-stale real samples and
+accumulating history with control disabled.
+
+Private detailed evidence is at
+`~/OriginalHomeIOT/data/commissioning/olinuxino-read-validation-2026-11-24.json`.
+
+Cloud validation also passed through the existing owner's authenticated API:
+`olinuxino-home` reported `connection=connected`, `status=live`, and an
+observation age of approximately 1.5 seconds. The native Backend exposed all
+six allowlisted channels, including advancing `LastSuccessfulRead` values.
+A later sample showed 68% SoC, 850 W battery discharge, 860 W load and 10 W
+grid import, consistent with the local gateway's contemporaneous readings.
+The cloud source origin was changed to `equipment` only with a fresh stored
+sample present. Cloud control remains disabled. The original Pi's site and
+history remain intact; it no longer receives the moved inverter's readings.
+
+## Bounded write qualification — 24 November 2026
+
+The owner explicitly requested the Pi-equivalent write validation. Preflight
+verified fresh native identity/readback, a single Java serial owner, idle AC
+and all disabled schedule flags, 68% battery SoC, and the paused night plan.
+Measured inverter clock progression was approximately 0.839 device seconds
+per wall second, consistent with the existing half-lease schedule margin.
+
+Tests used the deployed native OpenEMS writer and its temporary commissioning
+path. No direct serial writer, protection-register write, or competing bridge
+was introduced. Existing charge cap was 33% and stop SoC was 90%.
+
+- Holding 1090 changed to 10% and was verified by native readback.
+- A short grid-charge window activated AC charging and the atomic FC16 slot.
+  Across 54 useful observations, median battery charging was 210 W, with
+  negligible PV and grid import above household load.
+- Hardware timed expiry was observed before the wall-clock lease ended.
+- The existing 33% operating setting produced 930–942 W charging across six
+  useful samples, below the initial 1000 W operating ceiling.
+- Explicit cancellation cleared AC charging, disabled the slot and returned
+  the inverter to load-first mode.
+- A separate bounded 1000 W request was active when `original-edge` was
+  genuinely restarted (PID 4222 to 5461). Fresh readings returned; native
+  fallback cleared AC charging and the slot, the durable fallback marker
+  became false, and the old command was not replayed during observation.
+
+Cleanup verified charge cap 33%, stop SoC 90%, AC=0, priority=0, and all
+schedule times/enables zero. Temporary requests and commissioning authority
+were removed. The policy records board-specific qualification evidence but
+`writes_enabled=false`; the night plan is still disabled. The owner ceiling
+remains 2990 W, while rates above 1000 W are not qualified. Existing inverter
+discharge protection was not changed or newly claimed as qualified.
+
+Sanitized summary:
+[olinuxino-control-validation-20261124.json](../tools/openems-growatt-control/evidence/olinuxino-control-validation-20261124.json).
+Detailed observations and recovery records remain under the board's
+`~/OriginalHomeIOT/data/commissioning/`. Authenticated live monitoring was
+verified after final cleanup.

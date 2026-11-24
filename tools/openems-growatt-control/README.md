@@ -138,3 +138,21 @@ AC=0 and slot enable=0. Disarm the private policy before removing the native
 bridge or returning serial ownership to the legacy collector. Do not run a
 direct serial probe while the native bridge owns the adapter. Shadow deployment
 and commissioning scripts deliberately refuse the currently armed configuration.
+
+## Olinuxino migration validation — 24 November 2026
+
+The same inverter and Prolific adapter now have verified native reads on
+`original-home-olinuxino`. Owner-authorized write tests passed: 10% cap
+readback, grid charging (210 W median), hardware timed expiry, 33% operating
+response (930–942 W), explicit cancellation, and recovery after a real
+OpenEMS restart without replaying the old request. See
+[gateway commissioning](../../main_planning/olinuxino_gateway.md) and
+[sanitized evidence](evidence/olinuxino-control-validation-20261124.json).
+
+Olinuxino control is **qualified at the initial 1000 W level but disarmed**;
+its night plan remains disabled. Final readback verified AC=0, load-first,
+empty disabled slots, original 33% cap and 90% stop SoC. The Pi-specific
+collector handoff scripts above are historical procedures; do not run them
+unchanged against the Olinuxino's existing native bridge. Update its actual
+factory configuration PID rather than creating a second bridge with the
+same component ID.
