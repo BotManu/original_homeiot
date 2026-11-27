@@ -51,13 +51,30 @@ class CloudTest(unittest.TestCase):
             db.flush()
             db.add(Membership(user_id='other',site_id='other-home',role='owner'))
         self.login()
-        for path in ['/api/sites/other-home','/api/sites/other-home/history','/api/sites/other-home/export.csv']:
+        for path in ['/api/sites/other-home','/api/sites/other-home/history','/api/sites/other-home/export.csv','/api/sites/other-home/plan']:
             self.assertEqual(self.client.get(path).status_code,404)
         self.assertEqual(len(self.client.get('/api/sites').json()['sites']),1)
+        plan = self.client.get('/api/sites/first-home/plan').json()
+        self.assertFalse(plan['executable'])
+        self.assertIn(len(plan['slots']), (92, 96, 100))
         result = self.client.get('/api/sites/first-home/export.csv?hours=1')
         self.assertEqual(result.status_code,200)
         self.assertIn('observed_utc_ms',result.text)
         self.assertEqual(self.client.get('/api/sites/first-home/history?hours=999').status_code,422)
+
+    def test_live_plan_proxy_and_no_demo_fallback(self):
+        self.login()
+        with patch.dict(os.environ, {'LIVE_PLAN_SITE_ID':'first-home',
+                                    'LIVE_PLAN_GATEWAY_URL':'http://gateway.test',
+                                    'LIVE_PLAN_GATEWAY_PASSWORD':'test-only-password'}):
+            with patch('cloud.app.urlopen') as upstream:
+                upstream.return_value.__enter__.return_value.read.return_value = b'{"mode":"live_grid_charging","date":"2026-11-28"}'
+                response=self.client.get('/api/sites/first-home/plan')
+                self.assertEqual(response.status_code,200)
+                self.assertEqual(response.json()['mode'],'live_grid_charging')
+                self.assertIn('Authorization', upstream.call_args.args[0].headers)
+                upstream.return_value.__enter__.return_value.read.return_value = b'{"source":"Synthetic demo"}'
+                self.assertEqual(self.client.get('/api/sites/first-home/plan').status_code,503)
 
     def test_empty_stale_fresh_and_no_control(self):
         self.login()

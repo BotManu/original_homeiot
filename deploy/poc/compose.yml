@@ -30,6 +30,9 @@ services:
       DATABASE_URL: postgresql+psycopg://originalhome:${POSTGRES_PASSWORD}@database/originalhome
       CLOUD_ADMIN_PASSWORD: ${CLOUD_ADMIN_PASSWORD:?Set an owner password}
       COOKIE_SECURE: 'false'
+      LIVE_PLAN_SITE_ID: olinuxino-home
+      LIVE_PLAN_GATEWAY_URL: ${LIVE_PLAN_GATEWAY_URL:-}
+      LIVE_PLAN_GATEWAY_PASSWORD: ${LIVE_PLAN_GATEWAY_PASSWORD:-}
       OPENEMS_BACKEND_WS: ws://openems-backend:8082
       OPENEMS_BACKEND_USER: cloud-reader
       OPENEMS_BACKEND_PASSWORD: ${BACKEND_READER_PASSWORD}

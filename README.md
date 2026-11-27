@@ -1,5 +1,18 @@
 # OriginalHomeIOT local gateway
 
+The Olinuxino gateway and cloud dashboard now run a **28 November live-price
+charging trial**: real Energy-Charts RO quarter-hour prices, cheapest slots
+within the existing 02:00-05:00 window, qualified 1 kW charging to 90% SoC,
+and observed daily energy/spot values. Forced discharge/export is unsupported;
+supplier financial gain remains unavailable without actual tariffs.
+See the [live trial and strategy](main_planning/day_ahead_strategy.md).
+
+The historical demo includes 15-minute
+synthetic prices/forecasts, a 3 kWh battery schedule, imported energy cost,
+exported energy value and net financial gain. It models up to 2.99 kW but sends
+no equipment commands. See the [strategy, demo figures and live-price API plan](main_planning/day_ahead_strategy.md).
+On Windows, install `tzdata` if Python has no IANA timezone database.
+
 Local inverter controls are armed on the Olinuxino gateway with an initial 1 kW operating
 limit. The nightly grid-charge plan runs 02:00?05:00 Europe/Bucharest to a 90%
 target. Confirmed-runtime, operating-rate and real OpenEMS restart-recovery tests passed. The owner

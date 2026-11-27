@@ -14,6 +14,23 @@ provides transport encryption. Do not publish these ports on the internet.
 
 ## Implemented
 
+28 November 2026: `olinuxino-home` now displays the gateway's live dated trial
+through an authenticated read-only proxy. `LIVE_PLAN_GATEWAY_URL` and
+`LIVE_PLAN_GATEWAY_PASSWORD` are stored in the existing root-only `.env` and
+passed to the cloud app. The dashboard shows real RO spot prices and observed
+spot-value totals; supplier tariffs are not configured. The gateway schedules
+only qualified 1 kW grid charging, with no forced export. See the
+[live trial record](../../main_planning/day_ahead_strategy.md).
+
+27 November 2026: deployed the informational **Tomorrow's strategy** dropdown.
+It is collapsed by default and shows the next site-local day's synthetic
+15-minute battery plan, import cost, export value and net financial gain.
+The demo submits no equipment commands. The app-only rebuild passed deployed
+health/authentication/plan checks for both sites; Olinuxino telemetry was live.
+The previous image is retained as `originalhome/cloud:pre-strategy-20261127-214740`,
+with the source backup at `/tmp/originalhome-pre-strategy-20261127-214740.tar.gz`.
+See [planning assumptions and API strategy](../../main_planning/day_ahead_strategy.md).
+
 - FastAPI cloud application and locally served, responsive dashboard.
 - Hashed owner password, opaque eight-hour sessions, HttpOnly/SameSite cookies,
   origin checks, login throttling and audit events for login/logout/export.

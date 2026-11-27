@@ -27,7 +27,7 @@ class HTTPTests(unittest.TestCase):
                 self.assertEqual(caught.exception.code, 401)
                 caught.exception.close()
                 headers = {'Authorization': 'Basic ' + base64.b64encode(b'admin:test-password').decode()}
-                for path in ('/', '/style.css', '/app.js', '/api/overview', '/api/devices/growatt'):
+                for path in ('/', '/style.css', '/app.js', '/api/overview', '/api/devices/growatt', '/api/energy/plan'):
                     with urllib.request.urlopen(urllib.request.Request(url + path, headers=headers), timeout=5) as response:
                         body = response.read()
                         self.assertEqual(response.status, 200)

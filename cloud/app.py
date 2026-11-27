@@ -9,6 +9,10 @@ import os
 from pathlib import Path
 import secrets
 import time
+import base64
+import json
+from urllib.request import Request as UpstreamRequest, urlopen
+from urllib.error import URLError
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse
@@ -18,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from .models import Audit, Base, LoginSession, Membership, Sample, Site, User, now_ms, password_hash, verify_password
 from . import telemetry
+from gateway.day_ahead import demo_plan
 
 STATIC = Path(__file__).parent / 'static'
 
@@ -170,6 +175,25 @@ def create_app(database_url=None, worker=True):
                 for a, b in zip(ordered, ordered[1:]) if b.observed_ms - a.observed_ms > 20000]
         return {'samples': [sample_json(row) for row in ordered], 'gaps': gaps, 'limit': 2000,
                 'truncated': len(rows) == 2000, 'gap_threshold_ms': 20000}
+
+    @app.get('/api/sites/{site_id}/plan')
+    def day_ahead_plan(site_id: str, user=Depends(current_user), db=Depends(session)):
+        site = allowed_site(site_id, user, db)
+        if site_id == os.getenv('LIVE_PLAN_SITE_ID', 'olinuxino-home'):
+            url = os.getenv('LIVE_PLAN_GATEWAY_URL', '')
+            password = os.getenv('LIVE_PLAN_GATEWAY_PASSWORD', '')
+            if not url or not password:
+                raise HTTPException(503, 'Live gateway plan connection is not configured')
+            auth = base64.b64encode(('admin:'+password).encode()).decode()
+            try:
+                with urlopen(UpstreamRequest(url+'/api/energy/plan', headers={'Authorization':'Basic '+auth}), timeout=8) as response:
+                    data = json.loads(response.read(250001))
+                if data.get('mode') != 'live_grid_charging':
+                    raise ValueError('No live plan')
+                return data
+            except (URLError, OSError, ValueError):
+                raise HTTPException(503, 'Live gateway plan unavailable; no demo substitution')
+        return demo_plan(site.timezone)
 
     @app.get('/api/sites/{site_id}/export.csv')
     def export(site_id: str, hours: int = Query(24, ge=1, le=168),

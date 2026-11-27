@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 from .energy_control import FOLDER,build_request,atomic_private_write,status,submit,REQUEST_LOCK
+from .live_plan import decision as price_decision
 DEFAULT={'enabled':False,'timezone':'Europe/Bucharest','start':'02:00','end':'05:00','charge_w':1000,'target_soc':90}
 def config(folder=FOLDER):
     path=Path(folder)/'growatt-night-schedule.json'
@@ -34,16 +35,23 @@ def _tick(folder,now):
     owned=command.get('source')=='night_schedule'
     current=status(folder,now_ms=now_ms)
     soc=current.get('battery_soc')
+    selected=None
+    if inside:
+        try:selected=price_decision(folder,now,current,plan)
+        except (OSError,ValueError,KeyError,TypeError):selected={'charge':False,'reason':'live_plan_unavailable'}
+    price_hold=selected is not None and not selected['charge']
     target_reached=type(soc) is int and soc>=plan['target_soc']
-    if not inside or target_reached:
+    if not inside or target_reached or price_hold:
         if owned and command.get('mode')!='MONITOR':
             cancel=build_request('MONITOR',0,180,now_ms=now_ms)
             cancel['source']='night_schedule';atomic_private_write(path,cancel)
-        return 'target_reached' if target_reached and inside else 'outside_window' if plan['enabled'] else 'disabled'
+        return 'target_reached' if target_reached and inside else selected['reason'] if price_hold else 'outside_window' if plan['enabled'] else 'disabled'
     if not owned and command.get('expires_ms',0)>now_ms:return 'manual_override'
     if owned and command.get('mode')=='GRID_CHARGE' and command.get('expires_ms',0)>now_ms+90000:return 'lease_active'
     end_hour,end_minute=map(int,plan['end'].split(':'))
     ends=now.replace(hour=end_hour,minute=end_minute,second=0,microsecond=0)
+    if selected is not None:
+        ends=min(ends,datetime.fromtimestamp(selected['end_ms']/1000,now.tzinfo))
     duration=min(180,int(ends.timestamp()-now.timestamp()))
     if duration<120:return 'window_ending'
     # submit() enforces native qualification; the planner cannot arm hardware.

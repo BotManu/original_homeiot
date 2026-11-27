@@ -119,3 +119,75 @@ el('night-schedule-toggle').addEventListener('click',async () => {
   } catch {el('command-result').textContent='Unable to update night schedule.';}
   el('night-schedule-toggle').disabled=false;
 });
+
+
+const defaultPlanColumns = document.getElementById('plan-columns').innerHTML;
+const defaultPlanAssumptions = document.getElementById('plan-assumptions').textContent;
+const defaultPlanDisclaimer = document.getElementById('plan-disclaimer').textContent;
+let dayPlanVersion = 0, dayPlanTimer;
+async function loadDayPlan(path) {
+  const version = ++dayPlanVersion; clearTimeout(dayPlanTimer);
+  const meta = document.getElementById('plan-meta');
+  for (const id of ['plan-import','plan-export','plan-net']) document.getElementById(id).textContent = '--';
+  for (const id of ['plan-import-energy','plan-export-energy','plan-savings']) document.getElementById(id).textContent = '';
+  document.getElementById('plan-slots').replaceChildren();
+  try {
+    const response = await fetch(path, {signal: AbortSignal.timeout(12000)});
+    if (!response.ok) throw Error('unavailable');
+    const plan = await response.json();
+    if (version !== dayPlanVersion) return;
+    if (plan.mode === 'live_grid_charging') { renderLivePlan(plan); dayPlanTimer = setTimeout(() => loadDayPlan(path), 60000); return; }
+    document.getElementById('plan-badge').textContent = 'Demo';
+    document.getElementById('plan-columns').innerHTML = defaultPlanColumns;
+    document.getElementById('plan-assumptions').textContent = defaultPlanAssumptions;
+    document.getElementById('plan-disclaimer').textContent = defaultPlanDisclaimer;
+    const labels = document.querySelectorAll('#day-plan .plan-metrics article > span');
+    labels[0].textContent='Daily imported energy cost'; labels[1].textContent='Daily exported energy value'; labels[2].textContent='Net financial gain';
+    document.querySelector('#plan-net + small').textContent='Export minus import minus battery wear';
+    const money = n => new Intl.NumberFormat(undefined, {style:'currency',currency:plan.currency}).format(n);
+    const s = plan.summary;
+    meta.textContent = `${plan.date} | ${plan.timezone} | ${plan.slots.length} intervals | ${plan.source} | One gateway`;
+    document.getElementById('plan-import').textContent = money(s.import_cost_eur);
+    document.getElementById('plan-export').textContent = money(s.export_value_eur);
+    document.getElementById('plan-net').textContent = money(s.net_financial_gain_eur);
+    document.getElementById('plan-import-energy').textContent = `${s.import_kwh.toFixed(2)} kWh imported`;
+    document.getElementById('plan-export-energy').textContent = `${s.export_kwh.toFixed(2)} kWh exported`;
+    document.getElementById('plan-savings').textContent = `Battery savings versus the same solar/home forecast without a battery: ${money(s.savings_vs_no_battery_eur)}. Battery wear allowance: ${money(s.degradation_eur)}. A negative net means the home still has a net daily energy cost.`;
+    for (const slot of plan.slots) {
+      const tr = document.createElement('tr');
+      const values = [slot.local.slice(11,16)+' '+slot.local.slice(-6), `${slot.buy_eur_kwh.toFixed(3)} / ${slot.sell_eur_kwh.toFixed(3)}`, `${slot.solar_kwh.toFixed(3)} / ${slot.load_kwh.toFixed(3)}`,slot.action,`${slot.charge_kw.toFixed(2)} / ${slot.discharge_kw.toFixed(2)}`,`${slot.soc_end_pct.toFixed(1)}%`,`${slot.import_kwh.toFixed(3)} / ${slot.export_kwh.toFixed(3)}`];
+      for (const value of values) { const td = document.createElement('td'); td.textContent = value; tr.append(td); }
+      document.getElementById('plan-slots').append(tr);
+    }
+  } catch { if (version === dayPlanVersion) { document.getElementById('plan-badge').textContent = 'Unavailable'; meta.textContent = 'Plan unavailable. No demo data is substituted for a live gateway.'; } }
+}
+
+loadDayPlan('/api/energy/plan');
+
+function renderLivePlan(plan) {
+  const money = value => value == null ? '--' : new Intl.NumberFormat(undefined,{style:'currency',currency:'EUR'}).format(value);
+  document.getElementById('plan-badge').textContent = 'Live charging / real prices';
+  document.getElementById('plan-meta').textContent = `${plan.date} | ${plan.timezone} | ${plan.source} | ${plan.control_ready ? 'Qualified controller ready' : 'Controller unavailable: dispatch blocked'} | Single-day trial`;
+  const meter = plan.meter, measured = meter && meter.covered_seconds > 0;
+  const labels = document.querySelectorAll('#day-plan .plan-metrics article > span');
+  labels[0].textContent='Imported energy spot value'; labels[1].textContent='Exported energy spot value'; labels[2].textContent='Net spot value';
+  document.getElementById('plan-import').textContent=money(measured ? meter.import_spot_eur : null);
+  document.getElementById('plan-export').textContent=money(measured ? meter.export_spot_eur : null);
+  document.getElementById('plan-net').textContent=money(measured ? meter.net_spot_eur : null);
+  document.getElementById('plan-import-energy').textContent=measured ? `${meter.import_kwh.toFixed(3)} kWh observed` : 'Awaiting trial-day measurements';
+  document.getElementById('plan-export-energy').textContent=measured ? `${meter.export_kwh.toFixed(3)} kWh observed` : 'Export dispatch unsupported';
+  document.querySelector('#plan-net + small').textContent='Observed export minus import at wholesale prices';
+  document.getElementById('plan-savings').textContent=`${plan.selected_intervals} selected charging intervals. Maximum scheduled grid charge budget at spot prices: ${money(plan.charge_budget_spot_eur)}. Supplier financial gain unavailable until import/export tariffs are configured. ${measured ? `Observed coverage: ${(meter.covered_seconds/3600).toFixed(2)} hours; skipped gaps: ${meter.skipped_gap_seconds.toFixed(0)} seconds.` : ''}`;
+  document.getElementById('plan-assumptions').textContent=`Live charging at ${(plan.charge_w/1000).toFixed(2)} kW maximum, target ${plan.target_soc}%, within ${plan.window_start}-${plan.window_end}. Cheapest intervals are selected using ${plan.planning_soc}% planning SoC; ${plan.locked ? 'selection locked using actual window-start SoC' : 'selection will be recalculated using fresh SoC at window start'}. ${plan.target_energy_feasible ? '' : 'Window may be too short to reach target.'} Solar and household self-consumption stay under the existing inverter behavior.`;
+  document.getElementById('plan-disclaimer').textContent=plan.note+' Observed spot values are sample-based estimates, exclude battery wear, fees and taxes, and are not supplier settlement. Missing samples are not filled. Trial expires after its delivery date; the normal night schedule then resumes.';
+  document.getElementById('plan-columns').replaceChildren();
+  const head = document.createElement('tr');
+  for (const label of ['Start (local)','Spot EUR/kWh','Planned action','Charge limit','Target']) {const th=document.createElement('th');th.textContent=label;head.append(th);}
+  document.getElementById('plan-columns').append(head);
+  document.getElementById('plan-slots').replaceChildren();
+  for (const slot of plan.slots) {
+    const tr=document.createElement('tr');
+    for (const value of [slot.local.slice(11,16)+' '+slot.local.slice(-6),slot.spot_eur_kwh.toFixed(5),slot.selected ? 'Grid charging allowed' : 'Native solar / self-consumption',slot.selected ? `${(plan.charge_w/1000).toFixed(2)} kW` : '--',slot.selected ? `${plan.target_soc}%` : '--']) {const td=document.createElement('td');td.textContent=value;tr.append(td);}
+    document.getElementById('plan-slots').append(tr);
+  }
+}

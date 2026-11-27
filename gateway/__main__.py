@@ -11,6 +11,8 @@ from urllib.parse import urlsplit
 
 from .core import OpenEMS, Settings, Store, forward
 from .growatt import connection_status
+from .day_ahead import demo_plan
+from .live_plan import view as live_plan_view, record as record_live_plan
 from .energy_control import status as energy_control_status, submit as submit_energy_control, FOLDER as CONTROL_FOLDER, atomic_private_write, controls_ready
 from .night_schedule import run as run_night_schedule, config as night_config, tick as tick_night_schedule
 
@@ -36,9 +38,16 @@ def main():
     lock, stop = threading.Lock(), threading.Event()
 
     def collect():
+        previous=None
         while not stop.is_set():
             try:
-                store.add(adapter.read(), pending=bool(settings.thingsboard_url))
+                measurement=adapter.read()
+                store.add(measurement, pending=bool(settings.thingsboard_url))
+                measured_sample={'ts':int(time.time()*1000),'values':measurement}
+                if settings.mode != 'demo':
+                    try:record_live_plan(control_folder,previous,measured_sample)
+                    except (OSError,ValueError,KeyError,TypeError):pass
+                previous=measured_sample
                 status = "connected"
             except Exception:
                 status = "unavailable"  # Do not expose credential-bearing upstream errors.
@@ -94,7 +103,13 @@ def main():
             if not self.authorized():
                 return
             path = urlsplit(self.path).path
-            if path == "/api/energy/control":
+            if path == "/api/energy/plan":
+                try:
+                    data=live_plan_view(control_folder) if settings.mode != 'demo' else None
+                    self.send_body(200, json.dumps(data or demo_plan(), allow_nan=False).encode())
+                except (OSError,ValueError,KeyError,TypeError):
+                    self.send_body(503,b'{"error":"Live plan unavailable"}')
+            elif path == "/api/energy/control":
                 try:
                     data=energy_control_status(control_folder)
                     data['night_schedule']=night_config(control_folder)
