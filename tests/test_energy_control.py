@@ -12,7 +12,8 @@ import struct
 class EnergyControlTests(unittest.TestCase):
     def test_owner_ceiling_and_lease_are_not_silently_clamped(self):
         command=build_request('SOLAR_CHARGE',2990,60,now_ms=100000)
-        self.assertEqual(command['expires_ms'],160000)
+        self.assertEqual(command['duration_s'],60)
+        self.assertEqual(command['expires_ms'],205000)
         self.assertEqual(command['charge_w'],2990)
         for watts in [-1,2991,True,2990.5]:
             with self.assertRaises(ValueError):build_request('SOLAR_CHARGE',watts)
@@ -24,6 +25,8 @@ class EnergyControlTests(unittest.TestCase):
     def test_grid_charge_target_and_bounds(self):
         command=build_request('GRID_CHARGE',500,180,target_soc=90)
         self.assertEqual(command['target_soc'],90)
+        self.assertEqual(command['duration_s'],180)
+        self.assertEqual(command['expires_ms']-command['issued_ms'],225000)
         with self.assertRaises(ValueError):build_request('GRID_CHARGE',0)
         for target in (0,101,True,90.5):
             with self.assertRaises(ValueError):build_request('GRID_CHARGE',500,target_soc=target)
@@ -32,6 +35,18 @@ class EnergyControlTests(unittest.TestCase):
         from gateway.energy_control import submit
         with patch('gateway.energy_control.status',return_value={'max_charge_w':1000}):
             with self.assertRaises(ValueError):submit('GRID_CHARGE',1001)
+
+    def test_night_deadline_cannot_extend_for_activation(self):
+        from gateway.energy_control import submit,REQUIRED_GATES
+        ready={'max_charge_w':1000,'writes_enabled':True,'native_transport_bound':True,
+               'observed_ms':100000,'min_discharge_soc':0,'qualification':{k:True for k in REQUIRED_GATES}}
+        ready['qualification']['grid_charging_verified']=True
+        with tempfile.TemporaryDirectory() as directory,patch('gateway.energy_control.time.time',return_value=100),patch('gateway.energy_control.status',return_value=ready):
+            submit('GRID_CHARGE',1000,180,folder=directory,source='night_schedule',not_after_ms=280000)
+            command=json.loads((Path(directory)/'growatt-command.json').read_text())
+            self.assertEqual(command['expires_ms'],280000)
+            self.assertEqual(command['duration_s'],180)
+            with self.assertRaises(ValueError):submit('GRID_CHARGE',1000,folder=directory,not_after_ms=100000)
 
     def test_ready_requires_fresh_equipment_and_current_qualifications(self):
         from gateway.energy_control import controls_ready,REQUIRED_GATES

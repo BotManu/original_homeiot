@@ -35,4 +35,4 @@ class NightScheduleTests(unittest.TestCase):
  def test_submit_uses_requested_target_and_bounded_lease(self):
   with patch('gateway.night_schedule.status',return_value={'battery_soc':50}),patch('gateway.night_schedule.submit',return_value={'command_id':'test'}) as submit:
    self.assertEqual(tick(self.folder,self.now(3)),'submitted')
-   submit.assert_called_once_with('GRID_CHARGE',1000,180,folder=self.folder,target_soc=90,source='night_schedule')
+   submit.assert_called_once_with('GRID_CHARGE',1000,180,folder=self.folder,target_soc=90,source='night_schedule',not_after_ms=int(self.now(5).timestamp()*1000))

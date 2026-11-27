@@ -23,7 +23,7 @@ subprocess.run(['javac', '--release', '21', '-cp', str(LIB / '*'), '-d', str(CLA
 test_classpath=str(CLASSES)+':'+str(LIB/'*')
 subprocess.run(['javac', '--release', '21', '-cp', test_classpath, '-d', str(TESTS),
                 *map(str,sorted((ROOT/'test').glob('*.java')))],check=True)
-for test in ('ControlPolicyTest','originalhome.growatt.control.ScheduleSlotElementTest'):
+for test in ('ControlPolicyTest','originalhome.growatt.control.ScheduleSlotElementTest','originalhome.growatt.control.RunTimerTest'):
     subprocess.run(['java','-ea','-cp',test_classpath+':'+str(TESTS),test],check=True)
 
 dependencies = subprocess.run(['jdeps', '--multi-release', '21', '--class-path', str(LIB / '*'),
@@ -35,7 +35,7 @@ for target in re.findall(r'^\s+\S+\s+->\s+([\w.$]+)\s+', dependencies, re.M):
         packages.add(package)
 fields={
     'Manifest-Version':'1.0', 'Bundle-ManifestVersion':'2',
-    'Bundle-SymbolicName':'org.originalhome.growatt.control', 'Bundle-Version':'0.1.0',
+    'Bundle-SymbolicName':'org.originalhome.growatt.control', 'Bundle-Version':'0.2.0',
     'Bundle-Name':'OriginalHome bounded Growatt strategy commissioning',
     'Import-Package':','.join(sorted(packages)),
     'Service-Component':'OSGI-INF/driver.xml,OSGI-INF/controller.xml',

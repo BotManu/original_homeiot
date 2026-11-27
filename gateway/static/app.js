@@ -88,6 +88,7 @@ async function refreshControl() {
     if(data.night_schedule) { nightEnabled=data.night_schedule.enabled; el('night-schedule-toggle').textContent=nightEnabled ? 'Pause automatic night charging' : 'Enable automatic night charging'; }
     if(data.night_schedule) el('night-schedule-status').textContent = `Night grid charging: ${data.night_schedule.start}?${data.night_schedule.end} ${data.night_schedule.timezone}; target ${data.night_schedule.target_soc}%, ${(data.night_schedule.charge_w/1000).toFixed(2)} kW. ${data.night_schedule.enabled ? 'Scheduled; native qualification required.' : 'Disabled.'}`;
     el('control-status').textContent = `${data.status}: ${data.reason}. Operating cap ${(data.max_charge_w/1000).toFixed(2)} kW. Hardware writes ${controlReady ? 'enabled' : 'blocked'}. Physical effect verified: ${data.physical_effect_verified === true ? 'yes' : 'no'}.`;
+    if(data.run_active && data.run_until_ms) el('control-status').textContent += ` Charging time remaining: ${Math.max(0,Math.ceil((data.run_until_ms-Date.now())/1000))} seconds.`;
     el('control-blockers').replaceChildren();
     for (const [key, value] of Object.entries(data.qualification || {})) {
       if (value !== true && !(key === 'inverter_discharge_reserve_verified' && data.min_discharge_soc === 0)) { const li = document.createElement('li'); li.textContent = key.replaceAll('_', ' '); el('control-blockers').append(li); }

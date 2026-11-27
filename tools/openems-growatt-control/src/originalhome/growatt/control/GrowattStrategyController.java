@@ -36,6 +36,7 @@ public final class GrowattStrategyController extends AbstractOpenemsComponent im
     private final Path ledgerPath=folder.resolve("growatt-control-ledger.json");
     private final Path statusPath=folder.resolve("growatt-control-status.json");
     private String burnedId="", activeId="";
+    private final RunTimer runTimer=new RunTimer();
     private boolean previouslyApplied=false;
     private long lastAttemptMs=0, lastStatusMs=0;
     private long lastNativePublished=0;
@@ -122,7 +123,7 @@ public final class GrowattStrategyController extends AbstractOpenemsComponent im
                 request=new ControlPolicy.Request(body.get("command_id").getAsString(),
                     ControlPolicy.Mode.valueOf(body.get("mode").getAsString()),
                     integer(body,"charge_w",0),body.get("issued_ms").getAsBigDecimal().longValueExact(),
-                    body.get("expires_ms").getAsBigDecimal().longValueExact(),integer(body,"target_soc",90));
+                    body.get("expires_ms").getAsBigDecimal().longValueExact(),integer(body,"target_soc",90),integer(body,"duration_s",0));
                 requestedW=request.chargeW();
                 if(burnedId.equals(request.id()) && !activeId.equals(request.id())) {
                     request=null; reason="command_not_replayed_after_restart";
@@ -149,6 +150,12 @@ public final class GrowattStrategyController extends AbstractOpenemsComponent im
             }
             long recoveryUntil=profile.has("recovery_test_until_ms") ? profile.get("recovery_test_until_ms").getAsBigDecimal().longValueExact() : 0;
             boolean recoveryTest=recoveryUntil>now && recoveryUntil-now<=180000;
+            String timingStop=null;
+            if(request!=null && request.durationSeconds()>0) {
+                if(runTimer.expired(request.id(),now,System.nanoTime())) timingStop="duration_elapsed";
+                else if(!runTimer.startedFor(request.id()) && now-request.issuedMs()>=45000) timingStop="activation_timeout";
+                if(timingStop!=null) request=null;
+            }
             var decision=ControlPolicy.decide(limits,request,sample,now,previouslyApplied);
             if(!decision.writable()) {
                 if(driver!=null) driver.clearPendingWrites();
@@ -164,6 +171,7 @@ public final class GrowattStrategyController extends AbstractOpenemsComponent im
                 if(request!=null && !request.id().equals(activeId) && !decision.fallback()) {
                     if(burnedId.equals("INVALID_LEDGER")) throw new IllegalStateException("Invalid control ledger");
                     burnedId=request.id(); activeId=request.id();
+                    runTimer.reset(request.id());
                     // Commit intent before queueing a register write. On crash,
                     // request fallback instead of replaying a stale strategy.
                     remember(true); previouslyApplied=true;
@@ -171,8 +179,11 @@ public final class GrowattStrategyController extends AbstractOpenemsComponent im
                 target=decision.chargePercent();
                 if(now-lastAttemptMs>=5000) {
                     state=driver.apply(decision,limits,request==null ? now : request.expiresMs(),request==null || request.targetSoc()==0 ? limits.maxSoc() : Math.min(limits.maxSoc(),request.targetSoc()),now); lastAttemptMs=now;
+                    if(request!=null && !decision.fallback() && (state.equals("strategy_readback_confirmed")
+                            || (decision.priority()==0 && state.equals("readback_confirmed"))))
+                        runTimer.confirm(request,now,System.nanoTime());
                 } else state="awaiting_readback";
-                reason=decision.reason();
+                reason=timingStop==null ? decision.reason() : timingStop;
                 if(decision.fallback() && state.equals("readback_confirmed")) {
                     remember(false); previouslyApplied=false; activeId="";
                 }
@@ -185,6 +196,8 @@ public final class GrowattStrategyController extends AbstractOpenemsComponent im
             info.put("inverter_limits_applied",false);
             info.put("target_charge_percent",target);info.put("native_transport_bound",driver!=null && driver.transportBound());
             info.put("physical_effect_verified",false);
+            info.put("run_started_ms",runTimer.startedMs()); info.put("run_until_ms",runTimer.untilMs());
+            info.put("run_active",previouslyApplied && runTimer.startedMs()>0 && !runTimer.expired(activeId,now,System.nanoTime()));
             if(driver!=null) info.put("register_readback",driver.diagnostics());
             info.put("supported_modes",List.of("MONITOR","SELF_CONSUMPTION","SOLAR_CHARGE","GRID_CHARGE"));
             info.put("unsupported_modes",List.of("FORCED_DISCHARGE","GRID_EXPORT","TARIFF_OPTIMIZATION"));

@@ -34,13 +34,28 @@ The evidence directory contains real commissioning observations. Single FC06
 schedule writes did not stick; an FC16 triple activated battery-first and
 stopped battery discharge at night. Each attempt restores the original cap,
 empty disabled slot and original serial collector, verified by readback.
-The schedule ending minute is treated conservatively as inclusive. Timed
-requests use 120?180 seconds in the UI, with an absolute maximum of 180 seconds.
-The end is computed using inverter time with half the wall-clock lease reserved
-for observed clock drift, then rounded down; midnight-crossing
-requests are rejected. Slots are daily schedules: disabling/clearing them after
-use is essential. A timed end is not evidence of safe daily replay or recovery
-from every communication/process failure.
+The schedule ending minute is treated conservatively as inclusive. Since
+bundle 0.2.0, the UI's 120–180 seconds is runtime after confirmed inverter
+application. Startup has a separate maximum 45-second allowance; the outer
+authorization is at most runtime + 45 seconds. Legacy documents without
+`duration_s` retain their original maximum 180-second authorization.
+Deploy this request-layer update together with native bundle 0.2.0; an older
+native bundle rejects the longer outer authorization rather than applying it.
+
+Healthy operation renews a short atomic inverter window instead of ending
+the requested runtime at the first rounded minute boundary. The existing
+half-lease/round-down calculation now bounds each heartbeat to 30–90 device
+seconds; at the qualified clock floor of 0.5 device seconds per wall second,
+the remaining hardware window is at most 180 wall seconds after the last
+successful renewal. The native runtime timer uses monotonic elapsed time as
+well as the hard wall-clock deadline, so a backwards clock correction cannot
+extend charging. Normal expiry/cancellation disables AC charging first.
+
+The night planner cannot extend authorization past 05:00 for startup time.
+Whole-minute windows around midnight can still be rejected. Slots are daily
+schedules: disabling/clearing them after use remains essential. A stopped
+controller relies on the last hardware window and later durable recovery;
+it cannot promise the normal software stop time under every failure.
 
 `verification.json` is the historical initial read-only snapshot; it does not
 represent the later hardware trials. Never reuse its bundle hash or test count
@@ -159,3 +174,25 @@ collector handoff scripts above are historical procedures; do not run them
 unchanged against the Olinuxino's existing native bridge. Update its actual
 factory configuration PID rather than creating a second bridge with the
 same component ID.
+
+## Confirmed-runtime validation — 25 November 2026
+
+Deployed bundle 0.2.0 to the Olinuxino after native policy, monotonic timer,
+clock-window, atomic FC16, and 14 relevant Python/API tests passed. A real
+180-second request started its timer 11.748 seconds after submission and
+produced 179.029 seconds of sampled charging at 930–947 W (940 W median).
+AC charging was read back off 2.027 seconds after the timer deadline; full
+load-first idle readback followed at 13.028 seconds. Renewed hardware windows
+kept the run continuous across minute boundaries.
+
+Explicit cancellation, a real OpenEMS restart without command replay, and
+overlapping same-strategy lease renewal also passed. The handoff check used
+manual-tagged leases to isolate native renewal from the paused planner's
+intentional outside-window cancellation. The 05:00 hard request deadline is
+covered by the Python/night-plan checks. Controls at 1000 W and the existing
+02:00–05:00 / 90% plan were restored after cleanup.
+
+See [timing evidence](evidence/confirmed-duration-summary-20261125.json).
+The previous boot distribution remains on the board as
+`~/original/openems-edge.pre-confirmed-duration-20261125.jar`; restore matching
+Python/UI code as well when rolling back the request contract.

@@ -1,0 +1,66 @@
+{
+  "gateway": "original-home-olinuxino",
+  "bundle_version": "0.2.0",
+  "bundle_sha256": "1420434cd025e38d4eba82055fb03a118bfd3dca124ce9b5f03158deb5138679",
+  "verified_ms": 1795560389698,
+  "passed": true,
+  "requested_runtime_s": 180,
+  "native_runtime_s": 180.0,
+  "startup_to_confirmation_s": 11.748,
+  "charging_sample_span_s": 179.029,
+  "charging_power_range_w": [
+    930,
+    947
+  ],
+  "charging_median_w": 940,
+  "expiry_ac_off_delay_s": 2.027,
+  "expiry_full_idle_delay_s": 13.028,
+  "renewed_hardware_windows": [
+    [
+      27,
+      28
+    ],
+    [
+      27,
+      29
+    ],
+    [
+      28,
+      29
+    ],
+    [
+      28,
+      30
+    ],
+    [
+      29,
+      30
+    ],
+    [
+      29,
+      31
+    ]
+  ],
+  "explicit_cancellation_verified": true,
+  "cancellation_full_idle_delay_s": 13.929,
+  "restart_cleanup_verified": true,
+  "stale_command_not_replayed": true,
+  "restart_old_pid": "7244",
+  "restart_new_pid": "7700",
+  "continuous_lease_handoff_verified": true,
+  "lease_handoff_source_tag": "manual to isolate native renewal from the paused planner",
+  "native_policy_clock_atomic_tests_passed": true,
+  "relevant_python_tests_passed": 14,
+  "operating_ceiling_w": 1000,
+  "armed": true,
+  "night_plan": {
+    "enabled": true,
+    "timezone": "Europe/Bucharest",
+    "start": "02:00",
+    "end": "05:00",
+    "charge_w": 1000,
+    "target_soc": 90
+  },
+  "planner_state": "outside_window",
+  "rollback_jar": "~/original/openems-edge.pre-confirmed-duration-20261125.jar"
+}

@@ -14,6 +14,7 @@ REQUEST_LOCK=RLock()
 
 FOLDER=Path.home()/'.config/originalhome'
 MODES=('MONITOR','SELF_CONSUMPTION','SOLAR_CHARGE','GRID_CHARGE')
+ACTIVATION_ALLOWANCE_MS=45000
 
 
 def build_request(mode, charge_w=0, duration_s=180, now_ms=None, target_soc=90):
@@ -22,7 +23,7 @@ def build_request(mode, charge_w=0, duration_s=180, now_ms=None, target_soc=90):
     if type(charge_w) is not int or not 0 <= charge_w <= 2990:
         raise ValueError('Charge power must be an integer from 0 to 2990 W')
     if type(duration_s) is not int or not 1 <= duration_s <= 180:
-        raise ValueError('A command lease must be 1..180 seconds')
+        raise ValueError('Strategy runtime must be 1..180 seconds')
     if mode=='MONITOR' and charge_w:
         raise ValueError('Monitor mode does not request charging power')
     if type(target_soc) is not int or not 1 <= target_soc <= 100:
@@ -30,8 +31,10 @@ def build_request(mode, charge_w=0, duration_s=180, now_ms=None, target_soc=90):
     if mode=='GRID_CHARGE' and charge_w==0:
         raise ValueError('Grid charging requires positive charging power')
     now_ms=int(time.time()*1000) if now_ms is None else now_ms
+    run_seconds=duration_s if mode!='MONITOR' else 0
     return {'schema_version':1,'command_id':str(uuid.uuid4()),'mode':mode,
-            'charge_w':charge_w,'target_soc':target_soc,'issued_ms':now_ms,'expires_ms':now_ms+duration_s*1000}
+            'charge_w':charge_w,'target_soc':target_soc,'duration_s':run_seconds,
+            'issued_ms':now_ms,'expires_ms':now_ms+duration_s*1000+(ACTIVATION_ALLOWANCE_MS if run_seconds else 0)}
 
 
 def atomic_private_write(path, body):
@@ -77,12 +80,16 @@ def controls_ready(current, now_ms=None):
             if key!='inverter_discharge_reserve_verified' or current.get('min_discharge_soc',15)>0))
 
 
-def submit(mode, charge_w=0, duration_s=180, folder=FOLDER, target_soc=90, source='manual'):
+def submit(mode, charge_w=0, duration_s=180, folder=FOLDER, target_soc=90, source='manual', not_after_ms=None):
     with REQUEST_LOCK:
-        return _submit(mode,charge_w,duration_s,folder,target_soc,source)
+        return _submit(mode,charge_w,duration_s,folder,target_soc,source,not_after_ms)
 
-def _submit(mode,charge_w,duration_s,folder,target_soc,source):
+def _submit(mode,charge_w,duration_s,folder,target_soc,source,not_after_ms):
     request=build_request(mode,charge_w,duration_s,target_soc=target_soc)
+    if not_after_ms is not None:
+        if type(not_after_ms) is not int or not_after_ms<=request['issued_ms']:
+            raise ValueError('Request deadline must be in the future')
+        request['expires_ms']=min(request['expires_ms'],not_after_ms)
     current=status(folder)
     if mode!='MONITOR':
         ceiling=current.get('max_charge_w',2990)

@@ -200,17 +200,18 @@ public final class GrowattControlDriver extends AbstractOpenemsModbusComponent {
         String result=set(acWrite,"ac",0,"ac_disable");
         return result==null ? disableSlot() : result;
     }
-    private String schedule(int cap,int targetSoc,boolean grid,long until,long now) {
+    private String schedule(int cap,int targetSoc,boolean grid,long until,long now,boolean rolling) {
         String result;
-        if((plannedStart==null || plannedUntil!=until) &&
+        if(!rolling && (plannedStart==null || plannedUntil!=until) &&
                 (!Integer.valueOf(0).equals(integer("enable")) || !Integer.valueOf(0).equals(integer("ac"))))
             return stopCharging();
         result=set(chargeWrite,"charge",cap,"charge_cap"); if(result!=null) return result;
-        if(plannedStart==null || plannedUntil!=until) {
+        if(rolling || plannedStart==null || plannedUntil!=until) {
             try {
-                var window=ScheduleWindow.of(integer("hour"),integer("minute"),integer("second"),(until-now)/1000);
+                var window=rolling ? ScheduleWindow.heartbeat(integer("hour"),integer("minute"),integer("second"))
+                    : ScheduleWindow.of(integer("hour"),integer("minute"),integer("second"),(until-now)/1000);
                 plannedStart=window.start(); plannedEnd=window.end(); plannedUntil=until;
-            } catch(IllegalArgumentException invalid) { return "lease_too_short_for_hardware_schedule"; }
+            } catch(IllegalArgumentException invalid) { return rolling ? stopCharging() : "lease_too_short_for_hardware_schedule"; }
         }
         if(now>=until) return stopCharging();
         result=set(socWrite,"stopSoc",targetSoc,"target_soc"); if(result!=null) return result;
@@ -243,10 +244,10 @@ public final class GrowattControlDriver extends AbstractOpenemsModbusComponent {
             String result=set(chargeWrite,"charge",10,"commissioning_cap");
             return result==null ? "cap_readback_confirmed" : result;
         }
-        if(phase.equals("SLOT")) return schedule(10,commissioningOriginalSoc,false,until,now);
+        if(phase.equals("SLOT")) return schedule(10,commissioningOriginalSoc,false,until,now,false);
         if(phase.equals("GRID_SLOT") || phase.equals("GRID_SLOT_33")) {
             if(integer("soc")==null || integer("soc")>=90) return stopCharging();
-            return schedule(phase.equals("GRID_SLOT_33") ? 33 : 10,90,true,until,now);
+            return schedule(phase.equals("GRID_SLOT_33") ? 33 : 10,90,true,until,now,false);
         }
         return "unknown_commissioning_phase";
     }
@@ -259,6 +260,6 @@ public final class GrowattControlDriver extends AbstractOpenemsModbusComponent {
         if(cap<0 || cap>100 || (long)cap*limits.chargePercentReferenceW()>limits.maxChargeW()*100L)
             return "invalid_native_target";
         if(decision.priority()==0 || decision.fallback()) return stopCharging();
-        return schedule(cap,targetSoc,decision.gridCharge(),until,now);
+        return schedule(cap,targetSoc,decision.gridCharge(),until,now,true);
     }
 }

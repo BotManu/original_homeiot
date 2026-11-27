@@ -221,3 +221,36 @@ charge request was submitted. Both services remain enabled for startup.
 Previous private policy/plan/status were preserved on the board in
 `data/commissioning/olinuxino-pre-arm-20261125.json`. The arming snapshot is
 [olinuxino-armed-20261125.json](../tools/openems-growatt-control/evidence/olinuxino-armed-20261125.json).
+
+## Confirmed charging duration — 25 November 2026
+
+The owner observed that a manual 180-second request charged for substantially
+less time. Stored telemetry for the request issued at 00:13:01 showed charging
+samples only from 00:13:22 to 00:13:57, while authorization expired at 00:16:01.
+The old one-shot fallback window reserved half the lease for clock drift and
+rounded down to whole minutes, so the UI's duration did not describe actual
+runtime.
+
+Native bundle 0.2.0 now starts a monotonic runtime timer after inverter
+application is confirmed. Requests retain a maximum 180-second runtime and
+have a separate, bounded 45-second activation allowance. Healthy operation
+renews the existing short atomic inverter window without stopping charging.
+Normal runtime expiry and cancellation disable AC charging; a stopped
+controller leaves the last short hardware window and a durable recovery
+marker. The planner's hard authorization deadline stays at the configured
+05:00 end, even when activation takes time. Legacy requests retain their old
+180-second authorization bound. Deploy Python and the native bundle together.
+
+Measured hardware validation: 180.000 seconds native runtime, 179.029 seconds
+of charging samples at 930–947 W, and AC disabled 2.027 seconds after the
+deadline. Explicit cancellation, service restart/recovery without replay and
+continuous lease handoff passed. Native clock/policy/atomic/timer tests and
+14 relevant Python tests passed. The UI now says "Charging time", explains
+activation delay and displays remaining charging time.
+
+After testing, restored armed control at 1000 W and the enabled
+02:00–05:00 Europe/Bucharest plan to 90%. The Pi was not changed. Detailed
+records remain under `data/commissioning/`; the sanitized
+[timing summary](../tools/openems-growatt-control/evidence/confirmed-duration-summary-20261125.json)
+records the new bundle hash and measurements. Previous code and the boot JAR
+were preserved for coordinated rollback.

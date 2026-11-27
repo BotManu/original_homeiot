@@ -63,6 +63,10 @@ public final class ControlPolicyTest {
         check(ControlPolicy.decide(limits(),expired,sample(),NOW,true).fallback(),"Applied lease expires into fallback");
         check(ControlPolicy.decide(limits(),null,sample(),NOW,true).fallback(),"Cancellation fallback");
         check(!ControlPolicy.decide(limits(),new Request(ID,Mode.SOLAR_CHARGE,1000,NOW,NOW+180001),sample(),NOW,false).writable(),"Bound lease duration");
+        check(ControlPolicy.decide(limits(),new Request(ID,Mode.GRID_CHARGE,1000,NOW,NOW+225000,90,180),sample(),NOW,false).writable(),"Allow bounded activation plus confirmed runtime");
+        check(!ControlPolicy.decide(limits(),new Request(ID,Mode.GRID_CHARGE,1000,NOW,NOW+225001,90,180),sample(),NOW,false).writable(),"Do not extend outer authorization beyond activation budget");
+        check(!ControlPolicy.decide(limits(),new Request(ID,Mode.GRID_CHARGE,1000,NOW-45001,NOW+179999,90,180),sample(),NOW,false).writable(),"Stale unstarted request cannot begin charging");
+        check(!ControlPolicy.decide(limits(),new Request(ID,Mode.GRID_CHARGE,1000,NOW,NOW+226000,90,181),sample(),NOW,false).writable(),"Runtime itself remains at most 180 seconds");
         System.out.println("Control policy acceptance checks passed (including 880 power-bound and 10800 schedule-expiry cases).");
     }
 }

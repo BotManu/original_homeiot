@@ -48,7 +48,7 @@ def _tick(folder,now):
     if duration<120:return 'window_ending'
     # submit() enforces native qualification; the planner cannot arm hardware.
     try:
-        submitted=submit('GRID_CHARGE',plan['charge_w'],duration,folder=folder,target_soc=plan['target_soc'],source='night_schedule')
+        submitted=submit('GRID_CHARGE',plan['charge_w'],duration,folder=folder,target_soc=plan['target_soc'],source='night_schedule',not_after_ms=int(ends.timestamp()*1000))
     except PermissionError:return 'waiting_for_controller_qualification'
     return 'submitted'
 def run(stop,folder=FOLDER):

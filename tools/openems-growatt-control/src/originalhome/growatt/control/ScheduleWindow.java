@@ -1,6 +1,10 @@
 package originalhome.growatt.control;
 /** Inverter-clock schedule window. Treat end minute as inclusive; round down to respect the lease. */
 public record ScheduleWindow(int start, int end) {
+    /** Renew while healthy; a stopped controller leaves only 30–90 device seconds. */
+    public static ScheduleWindow heartbeat(int hour,int minute,int second) {
+        return of(hour,minute,second,180);
+    }
     public static long words(int start,int end,int enable) {
         if(start<0 || end<0 || start>0xffff || end>0xffff || (enable!=0 && enable!=1)
                 || (start>>8)>23 || (end>>8)>23 || (start&255)>59 || (end&255)>59

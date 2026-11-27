@@ -16,8 +16,9 @@ public final class ControlPolicy {
                 throw new IllegalArgumentException("Discharge reserve must be 0..99 and below the charging ceiling");
         }
     }
-    public record Request(String id, Mode mode, int chargeW, long issuedMs, long expiresMs, int targetSoc) {
-        public Request(String id,Mode mode,int chargeW,long issuedMs,long expiresMs) { this(id,mode,chargeW,issuedMs,expiresMs,0); }
+    public record Request(String id, Mode mode, int chargeW, long issuedMs, long expiresMs, int targetSoc, int durationSeconds) {
+        public Request(String id,Mode mode,int chargeW,long issuedMs,long expiresMs) { this(id,mode,chargeW,issuedMs,expiresMs,0,0); }
+        public Request(String id,Mode mode,int chargeW,long issuedMs,long expiresMs,int targetSoc) { this(id,mode,chargeW,issuedMs,expiresMs,targetSoc,0); }
     }
     public record Snapshot(long observedMs, Integer soc, Integer batteryW, Integer priority,
             Integer chargePercent, Integer acChargeEnabled, boolean identityMatches,
@@ -67,10 +68,14 @@ public final class ControlPolicy {
         }
         if (request.id() == null || !request.id().matches("[a-f0-9-]{36}"))
             return blocked("invalid_command_id");
+        if (request.durationSeconds()<0 || request.durationSeconds()>180) return blocked("invalid_run_duration");
+        long maximumLease=request.durationSeconds()==0 ? 180000L : request.durationSeconds()*1000L+45000;
         if (request.issuedMs() > nowMs + 2000 || request.issuedMs() <= 0
                 || request.expiresMs() <= request.issuedMs()
-                || request.expiresMs() - request.issuedMs() > 180000)
+                || request.expiresMs() - request.issuedMs() > maximumLease)
             return blocked("invalid_command_lease");
+        if(request.durationSeconds()>0 && !leasePreviouslyApplied && nowMs-request.issuedMs()>=45000)
+            return blocked("activation_timeout");
         if (nowMs >= request.expiresMs())
             return leasePreviouslyApplied ? fallback("lease_expired") : blocked("command_expired");
         if (request.chargeW() < 0 || request.chargeW() > limits.maxChargeW())
